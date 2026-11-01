@@ -1,0 +1,20 @@
+{
+  "name": "veridex-road-auditor",
+  "version": "2.0.0",
+  "description": "VERIDEX AI — Autonomous Pothole Detection & Contractor Defect Liability Warranty Auditor for Techfest IIT Bombay",
+  "scripts": {
+    "start": "python serve.py",
+    "dev": "python serve.py"
+  },
+  "keywords": [
+    "pothole-detection",
+    "yolov8",
+    "onnx-runtime-web",
+    "computer-vision",
+    "techfest-iit-bombay",
+    "smart-city",
+    "defect-liability-period"
+  ],
+  "author": "VERIDEX Team",
+  "license": "MIT"
+}

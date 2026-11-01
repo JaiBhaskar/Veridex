@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VERIDEX AI — Autonomous Pothole Detection & Contractor Warranty Engine</title>
+  <meta name="description" content="Real-time edge computer vision for road defect detection, photogrammetric sizing, and automated contractor defect liability warranty enforcement. Built for Techfest IIT Bombay.">
+  <meta name="theme-color" content="#0a0d14">
+
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕳️</text></svg>">
+
+  <!-- Leaflet CSS for Interactive Map -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <style>
+    :root {
+      --bg: #090c10;
+      --card: #131822;
+      --card-alt: #18202e;
+      --bd: #222c3d;
+      --bd-light: #2d3a50;
+      --tx: #f0f3f8;
+      --mu: #94a3b8;
+      --ac: #ff5722;
+      --ac-hover: #ff7043;
+      --ac-glow: rgba(255, 87, 34, 0.25);
+      --ok: #10b981;
+      --ok-glow: rgba(16, 185, 129, 0.2);
+      --bad: #ef4444;
+      --bad-glow: rgba(239, 68, 68, 0.2);
+      --mid: #f59e0b;
+      --mid-glow: rgba(245, 158, 11, 0.2);
+      --info: #3b82f6;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--tx);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    header {
+      background: rgba(19, 24, 34, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--bd);
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      font-size: 26px;
+      line-height: 1;
+      filter: drop-shadow(0 0 8px var(--ac-glow));
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-title span {
+      background: linear-gradient(135deg, #ff7a33, #ff3b30);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge-iitb {
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .brand-sub {
+      color: var(--mu);
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    .pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--mu);
+    }
+    .pill.active {
+      border-color: var(--ok);
+      color: var(--ok);
+      background: var(--ok-glow);
+    }
+    .pill.warn {
+      border-color: var(--mid);
+      color: var(--mid);
+      background: var(--mid-glow);
+    }
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Layout */
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      main { grid-template-columns: 1fr; padding: 12px; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      padding: 16px;
+      position: relative;
+    }
+    .mt { margin-top: 14px; }
+
+    /* Video HUD Stage */
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--bd);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    video, canvas.ov {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    canvas.ov { cursor: crosshair; }
+
+    .empty-stage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      color: var(--mu);
+      background: radial-gradient(circle at center, #151b26 0%, #080a0f 100%);
+      pointer-events: none;
+      z-index: 5;
+    }
+    .empty-stage.hidden { display: none; }
+    .empty-icon { font-size: 42px; margin-bottom: 8px; }
+
+    /* Telemetry HUD on video overlay */
+    .hud-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .hud-chip {
+      background: rgba(10, 14, 20, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(6px);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      color: #e2e8f0;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Buttons & Controls */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    button, label.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--ac);
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    button:hover, label.btn:hover { background: var(--ac-hover); }
+    button:active, label.btn:active { transform: scale(0.98); }
+
+    button.secondary, label.btn.secondary {
+      background: var(--card-alt);
+      color: var(--tx);
+      border-color: var(--bd);
+    }
+    button.secondary:hover, label.btn.secondary:hover {
+      background: #202b3d;
+      border-color: var(--bd-light);
+    }
+
+    button.icon-btn {
+      padding: 9px;
+      min-width: 38px;
+    }
+
+    button.sm {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    button:disabled, label.btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Progress bar */
+    .progress-bar-container {
+      height: 6px;
+      background: #1e2636;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff5722, #00e676);
+      transition: width 0.2s ease;
+    }
+
+    /* KPI Summary Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi {
+      background: var(--card-alt);
+      border: 1px solid var(--bd);
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .kpi-val {
+      font-size: 22px;
+      font-weight: 800;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      color: var(--tx);
+    }
+    .kpi-label {
+      font-size: 11px;
+      color: var(--mu);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    /* Leaflet Map */
+    #mapContainer {
+      width: 100%;
+      height: 260px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--bd);
+      margin-top: 10px;
+      z-index: 1;
+    }
+
+    /* Forms & Inputs */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--mu);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px;
+    }
+    input[type=number], input[type=text], select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      background: #0b0f16;
+      color: var(--tx);
+      font-size: 13px;
+      outline: none;
+      transition: border 0.15s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--ac);
+    }
+    textarea {
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      min-height: 90px;
+    }
+
+    /* Table */
+    .table-scroll {
+      max-height: 380px;
+      overflow-y: auto;
+      border-radius: 8px;
+      border: 1px solid var(--bd);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }
+    th {
+      background: var(--card-alt);
+      color: var(--mu);
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--bd);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--bd);
+      vertical-align: top;
+      background: var(--card);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--card-alt); }
+
+    td img {
+      width: 88px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--bd);
+      cursor: zoom-in;
+      display: block;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    td img:hover {
+      transform: scale(1.05);
+      border-color: var(--ac);
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .tag-high { background: var(--bad); color: #fff; }
+    .tag-mid { background: var(--mid); color: #111; }
+    .tag-low { background: var(--ok); color: #111; }
+    .tag-w-ok { background: rgba(16, 185, 129, 0.2); color: var(--ok); border: 1px solid var(--ok); }
+    .tag-w-bad { background: rgba(239, 68, 68, 0.2); color: var(--bad); border: 1px solid var(--bad); }
+    .tag-w-unk { background: rgba(245, 158, 11, 0.2); color: var(--mid); border: 1px solid var(--mid); }
+
+    /* Lightbox Modal */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(4, 7, 12, 0.95);
+      display: flex;
+      flex-direction: column;
+    }
+    .lightbox[hidden] { display: none; }
+    .lb-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--bd);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+    }
+    .lb-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: auto;
+    }
+    .lb-img {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--bd-light);
+    }
+
+    /* Permission Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1500;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay[hidden] { display: none; }
+    .modal-card {
+      background: var(--card);
+      border: 1px solid var(--bd-light);
+      border-radius: 14px;
+      max-width: 500px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Accordion Details */
+    details {
+      margin-top: 10px;
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: var(--card-alt);
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--mu);
+      user-select: none;
+    }
+    details[open] summary { margin-bottom: 10px; color: var(--tx); }
+
+    .help-text {
+      color: var(--mu);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">🕳️</div>
+      <div>
+        <div class="brand-title">
+          <span>VERIDEX AI</span> Road Auditor
+          <span class="badge-iitb">IIT Bombay Techfest</span>
+        </div>
+        <div class="brand-sub">Real-Time Photogrammetric Pothole Detection & Contractor Defect Liability Enforcement</div>
+      </div>
+    </div>
+
+    <!-- Live Status Indicators -->
+    <div class="pills">
+      <div class="pill" id="pillGps">
+        <span class="pill-dot"></span>
+        <span id="pillGpsText">GPS Offline</span>
+      </div>
+      <div class="pill" id="pillModel">
+        <span class="pill-dot"></span>
+        <span id="pillModelText">Model Initializing...</span>
+      </div>
+      <div class="pill" id="pillFps">
+        <span class="pill-dot"></span>
+        <span id="pillFpsText">0 FPS</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard -->
+  <main>
+    <!-- Left Column: Video HUD & Controls -->
+    <div>
+      <div class="card">
+        <!-- Video Stage with HUD Overlays -->
+        <div class="stage" id="stage">
+          <video id="video" playsinline webkit-playsinline muted></video>
+          <canvas id="ov" class="ov"></canvas>
+
+          <!-- Telemetry HUD -->
+          <div class="hud-bar">
+            <div class="hud-chip" id="hudSpeed">SPEED: 0 km/h</div>
+            <div class="hud-chip" id="hudHeading">HDG: 0° N</div>
+            <div class="hud-chip" id="hudRoad">ROAD: Detecting...</div>
+          </div>
+
+          <!-- Empty State Overlay -->
+          <div class="empty-stage" id="emptyStage">
+            <div class="empty-icon">📹</div>
+            <div style="font-size:16px; font-weight:700; color:var(--tx); margin-bottom:4px;">No Video Feed Active</div>
+            <div>Start live camera or load the sample dashcam video to begin real-time road auditing.</div>
+          </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="btn-row">
+          <button id="runBtn" style="min-width:140px;">
+            <span>▶</span> Start Detecting
+          </button>
+          <button id="camBtn" class="secondary">
+            <span>📷</span> Use Camera
+          </button>
+          <button id="flipCamBtn" class="secondary icon-btn" title="Flip Camera (Front/Back)">
+            <span>🔄</span>
+          </button>
+          <button id="sampleVidBtn" class="secondary" title="Play Pre-loaded Dashcam Video">
+            <span>🚗</span> Play Sample Video
+          </button>
+          <label class="btn secondary">
+            <span>📁</span> Load Video
+            <input type="file" id="vidFile" accept="video/*" hidden>
+          </label>
+          <label class="btn secondary">
+            <span>🧠</span> Custom Model
+            <input type="file" id="modelFile" accept=".onnx" hidden>
+          </label>
+        </div>
+
+        <!-- Model Loading Progress & Status -->
+        <div class="progress-bar-container" id="modelBar" hidden>
+          <div class="progress-bar-fill" id="modelBarFill"></div>
+        </div>
+        <div class="help-text" id="modelStatus" style="margin-top:8px;">
+          Booting edge AI model engine...
+        </div>
+      </div>
+
+      <!-- Audit History & Complaint Register -->
+      <div class="card mt">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h2 style="margin:0; font-size:16px; font-weight:700;">
+              Detected Potholes &amp; Warranty Audits (<span id="count">0</span>)
+            </h2>
+            <div class="help-text" style="margin:2px 0 0;">Logged with photogrammetric 3D road coordinates &amp; contractor liability classification.</div>
+          </div>
+          <div class="btn-row" style="margin-top:0;">
+            <button class="secondary sm" id="simulateBtn" title="Simulate a detected pothole for testing">
+              <span>⚡</span> Test Pothole
+            </button>
+            <button class="secondary sm" id="csvBtn">
+              <span>📥</span> Export CSV
+            </button>
+            <button class="secondary sm" id="clearBtn">
+              <span>🗑️</span> Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="table-scroll mt">
+          <table>
+            <thead>
+              <tr>
+                <th>Photo</th>
+                <th>Pothole ID &amp; Severity</th>
+                <th>3D Position &amp; GPS</th>
+                <th>Contractor &amp; Warranty (DLP)</th>
+                <th>Enforcement Action</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <div id="none" style="text-align:center; padding:24px; color:var(--mu);">
+            No potholes detected yet. Start detecting or click "Test Pothole" to inject an audit.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Map, Road Selector, Telemetry -->
+    <div>
+      <!-- Live Metrics KPI Grid -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-val" id="kpiTotal">0</div>
+          <div class="kpi-label">Potholes</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-val" id="kpiHigh" style="color:var(--bad)">0</div>
+          <div class="kpi-label">Severe (>60cm)</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-val" id="kpiUnder" style="color:var(--ok)">0</div>
+          <div class="kpi-label">Under DLP</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-val" id="kpiCost">₹0</div>
+          <div class="kpi-label">Claim Liability</div>
+        </div>
+      </div>
+
+      <!-- Interactive Map Card -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="margin:0; font-size:15px; font-weight:700;">Live Road Defect Map</h2>
+          <button class="secondary sm" id="gpsBtn">
+            <span>📡</span> <span id="gpsBtnLabel">Start Live GPS</span>
+          </button>
+        </div>
+        <div class="help-text" id="gpsStatusText" style="margin-top:4px;">
+          GPS tracking inactive. Click "Start Live GPS" or select a demo road below.
+        </div>
+
+        <!-- Leaflet Map Element -->
+        <div id="mapContainer"></div>
+      </div>
+
+      <!-- Road & DLP Contract Configuration -->
+      <div class="card mt">
+        <h2 style="margin:0 0 10px; font-size:15px; font-weight:700;">Road &amp; Contractor Contract Database</h2>
+        <div class="grid-2">
+          <div>
+            <label for="roadSel">Select Monitored Road</label>
+            <select id="roadSel"></select>
+          </div>
+          <div>
+            <label for="sens">AI Detection Sensitivity</label>
+            <select id="sens">
+              <option value="low">Conservative (High Confidence &gt; 0.65)</option>
+              <option value="mid" selected>Standard (Balanced 0.50)</option>
+              <option value="high">Aggressive (Early Warning 0.35)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="help-text" id="roadMatchHint" style="margin-top:8px;"></div>
+
+        <!-- Camera Calibration Settings -->
+        <details class="mt" open>
+          <summary>Camera Photogrammetry Calibration</summary>
+          <div class="grid-2" style="margin-top:8px;">
+            <div>
+              <label for="camH">Mount Height (m)</label>
+              <input type="number" id="camH" value="1.20" step="0.05" min="0.3" max="4.0">
+            </div>
+            <div>
+              <label for="tilt">Down Pitch Angle (°)</label>
+              <input type="number" id="tilt" value="10.0" step="0.5" min="0" max="60">
+            </div>
+            <div>
+              <label for="fov">Lens Field of View (°)</label>
+              <input type="number" id="fov" value="70" step="1" min="30" max="120">
+            </div>
+            <div style="display:flex; align-items:center; padding-top:16px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; text-transform:none; font-size:12px; color:var(--tx);">
+                <input type="checkbox" id="guides" checked style="width:auto; margin:0;">
+                Show Distance Grid (3m, 5m, 10m, 20m)
+              </label>
+            </div>
+          </div>
+          <div class="help-text">
+            Trigonometric flat-road projection computes exact distance, lateral lane offset, and physical metric width from bounding box pixels.
+          </div>
+        </details>
+
+        <!-- Manual Location / Indoors Demo -->
+        <details>
+          <summary>Manual GPS Coordinates (Indoors / Presentation)</summary>
+          <div style="margin-top:8px;">
+            <label for="demoRoadSel">Quick Jump to Venue</label>
+            <select id="demoRoadSel"></select>
+          </div>
+          <div class="grid-2" style="margin-top:8px;">
+            <div>
+              <label for="mlat">Latitude</label>
+              <input type="number" id="mlat" step="any" value="19.1334">
+            </div>
+            <div>
+              <label for="mlng">Longitude</label>
+              <input type="number" id="mlng" step="any" value="72.9133">
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <label for="mhead">Vehicle Heading (° 0=North, 90=East)</label>
+            <input type="number" id="mhead" value="90" step="5" min="0" max="359">
+          </div>
+        </details>
+
+        <!-- Advanced JSON Contracts -->
+        <details>
+          <summary>Contract Database (JSON)</summary>
+          <div style="margin-top:8px;">
+            <textarea id="roadJson" spellcheck="false"></textarea>
+            <div class="help-text" id="jsonStatus"></div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </main>
+
+  <!-- Photo Lightbox Modal -->
+  <div class="lightbox" id="lb" hidden>
+    <div class="lb-header">
+      <div id="lbCaption" style="font-weight:600;">Pothole Inspection</div>
+      <div class="btn-row" style="margin:0;">
+        <button class="secondary sm" id="lbPrev">‹ Prev</button>
+        <button class="secondary sm" id="lbNext">Next ›</button>
+        <a id="lbDownload" class="btn secondary sm" download="pothole.jpg" href="#">Download Photo</a>
+        <button class="secondary sm" id="lbClose">✕ Close</button>
+      </div>
+    </div>
+    <div class="lb-body" id="lbBody">
+      <img id="lbImg" class="lb-img" alt="Pothole Snapshot">
+    </div>
+  </div>
+
+  <!-- HTTPS / Camera Permission Assistance Modal -->
+  <div class="modal-overlay" id="permModal" hidden>
+    <div class="modal-card">
+      <h3 style="margin:0 0 8px; font-size:18px;">Camera / Sensor Permission Notice</h3>
+      <p id="permModalMsg" style="color:var(--mu); font-size:13px; line-height:1.6;">
+        Modern mobile browsers (Chrome / Safari) require a secure context (HTTPS) to activate the camera and GPS sensors.
+      </p>
+      <div style="background:var(--card-alt); border:1px solid var(--bd); padding:10px 14px; border-radius:8px; font-size:12px; margin:14px 0;">
+        <b>To fix on Phone:</b>
+        <ul style="margin:6px 0 0; padding-left:18px;">
+          <li>Deploy to Vercel (free, 1-click HTTPS URL).</li>
+          <li>Or tap "Allow" when your browser prompts for Camera and Location permissions.</li>
+        </ul>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button id="permModalClose">Understood</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONNX Runtime Web Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+  <!-- Leaflet JS Map Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+  /* =========================================================================
+     VERIDEX AI — CORE ENGINE
+     Designed for Techfest IIT Bombay
+     ========================================================================= */
+
+  (function(){
+    // Utility selectors
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const num = (id, d) => { const v = parseFloat($(id).value); return isFinite(v) ? v : d; };
+
+    // --- State Variables ---
+    const CDN_ORT = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
+    const MODEL_URL = "pothole.onnx";
+    const MODEL_VER = "v2.0_iitb";
+
+    let session = null;
+    let detecting = false;
+    let stream = null;
+    let currentFacingMode = "environment"; // default rear camera
+    let watchId = null;
+    let gps = null;
+    let tracks = [];
+    let nextTrackId = 1;
+    let potholes = [];
+    let flashes = [];
+    let audioCtx = null;
+
+    // Video resolution & canvas dimensions
+    let W = 1280, H = 720;
+    const video = $("video");
+    const ov = $("ov");
+    const ctx = ov.getContext("2d");
+
+    // Preallocated buffers for zero-GC 30 FPS inference
+    const proc = document.createElement("canvas");
+    proc.width = proc.height = 640;
+    const pctx = proc.getContext("2d", { willReadFrequently: true });
+    let inBuf = new Float32Array(3 * 640 * 640);
+
+    const snap = document.createElement("canvas");
+    const sctx = snap.getContext("2d");
+
+    // Performance telemetry
+    let infMs = 0, fpsCount = 0, fpsTimer = performance.now();
+
+    // Leaflet map instance
+    let map = null;
+    let carMarker = null;
+    let potholeMarkersLayer = null;
+
+    // --- Preloaded Road & Contract Database (Including IIT Bombay & Mumbai!) ---
+    let ROADS = [
+      {
+        id: "IITB-01",
+        name: "Adi Shankaracharya Marg / JVLR (IIT Bombay Main Gate to Powai)",
+        authority: "BMC / MCGM & MMRDA",
+        contractor: "Larsen & Toubro (L&T Infrastructure)",
+        completed: "2023-10-15",
+        dlpYears: 3,
+        lat: 19.1298, lng: 72.9150,
+        path: [[19.1250, 72.9020], [19.1298, 72.9150], [19.1334, 72.9250], [19.1380, 72.9340]],
+        note: "Major Powai arterial connecting Eastern & Western Express Highways right outside IIT Bombay campus."
+      },
+      {
+        id: "MUM-01",
+        name: "Western Express Highway (WEH) / NH-48 (Bandra to Dahisar)",
+        authority: "Maharashtra PWD / MMRDA",
+        contractor: "IRB Infrastructure Developers",
+        completed: "2024-01-20",
+        dlpYears: 5,
+        lat: 19.0800, lng: 72.8500,
+        path: [[19.0550, 72.8450], [19.0800, 72.8500], [19.1200, 72.8550], [19.1800, 72.8600]],
+        note: "High-density arterial expressway in Mumbai under 5-year DLP warranty."
+      },
+      {
+        id: "MUM-02",
+        name: "Eastern Express Highway (EEH) (Sion to Thane)",
+        authority: "Brihanmumbai Municipal Corporation (BMC)",
+        contractor: "HCC – Shapoorji Pallonji (JV)",
+        completed: "2022-05-10",
+        dlpYears: 3,
+        lat: 19.0600, lng: 72.8800,
+        path: [[19.0400, 72.8700], [19.0800, 72.8900], [19.1400, 72.9300], [19.1900, 72.9600]],
+        note: "Heavy transport highway connecting Mumbai island city to Thane."
+      },
+      {
+        id: "NHAI-95",
+        name: "Ludhiana Elevated Highway, NH-95 (Samrala Chowk to Municipal Limit)",
+        authority: "NHAI",
+        contractor: "Gammon Engineers – SP Singla Constructions (JV)",
+        completed: "2023-09-11",
+        dlpYears: 5,
+        lat: 30.9040, lng: 75.8500,
+        path: [[30.8930, 75.9400], [30.8990, 75.8800], [30.9040, 75.8500], [30.9100, 75.8250]],
+        note: "EPC contract with 5-year Defect Liability Period under NHAI guidelines."
+      },
+      {
+        id: "NHAI-07",
+        name: "Bhatinda–Malout Corridor, NH-7",
+        authority: "NHAI",
+        contractor: "Dineshchandra R. Agrawal Infracon Pvt Ltd",
+        completed: "2023-03-31",
+        dlpYears: 4,
+        lat: 30.2000, lng: 74.7500,
+        path: [[30.2110, 74.9455], [30.2000, 74.7500], [30.1906, 74.4980]],
+        note: "38.67 km NHAI corridor."
+      }
+    ];
+
+    // --- Photogrammetric & Mathematical Projection ---
+    function focalFromFov(W, fovDeg) {
+      return (W / 2) / Math.tan(fovDeg * Math.PI / 360);
+    }
+
+    // Flat-road projection: Camera height h (m), pitched down by thetaDeg, focal length f (px).
+    // Calculates: forward distance, lateral offset (right +), and optical depth.
+    function groundPoint(u, v, f, cx, cy, h, thetaDeg, maxRange) {
+      const th = thetaDeg * Math.PI / 180;
+      const x = (u - cx) / f, y = (v - cy) / f;
+      const den = Math.sin(th) + y * Math.cos(th);
+      if (den <= 1e-6) return null; // Horizon boundary
+      const t = h / den;
+      const fwd = t * (Math.cos(th) - y * Math.sin(th));
+      const side = t * x;
+      return { fwd, side, depth: t, ok: (fwd >= 0 && fwd <= maxRange) };
+    }
+
+    function rowForDistance(d, f, cy, h, thetaDeg) {
+      const th = thetaDeg * Math.PI / 180;
+      const y = (h * Math.cos(th) - d * Math.sin(th)) / (d * Math.cos(th) + h * Math.sin(th));
+      return cy + f * y;
+    }
+
+    function toGeoM(lat0, lng0, headingDeg, sideM, fwdM) {
+      const h = headingDeg * Math.PI / 180;
+      const east = fwdM * Math.sin(h) + sideM * Math.cos(h);
+      const north = fwdM * Math.cos(h) - sideM * Math.sin(h);
+      return {
+        lat: lat0 + north / 111320,
+        lng: lng0 + east / (111320 * Math.cos(lat0 * Math.PI / 180))
+      };
+    }
+
+    function haversineM(lat1, lon1, lat2, lon2) {
+      const R = 6371000, t = Math.PI / 180;
+      const x = (lat2 - lat1) * t, y = (lon2 - lon1) * t;
+      const a = Math.sin(x/2)**2 + Math.cos(lat1*t) * Math.cos(lat2*t) * Math.sin(y/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function distToPolylineM(lat, lng, path) {
+      if (!path || !path.length) return Infinity;
+      const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540;
+      const pts = path.map(q => [(q[1] - lng) * kx, (q[0] - lat) * ky]);
+      if (pts.length === 1) return Math.hypot(pts[0][0], pts[0][1]);
+      let best = Infinity;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const ax = pts[i][0], ay = pts[i][1], bx = pts[i+1][0], by = pts[i+1][1];
+        const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+        const t = L ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L)) : 0;
+        best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+      }
+      return best;
+    }
+
+    // --- YOLOv8 Decoder with Dual Architecture Support ---
+    function iou(a, b) {
+      const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]);
+      const x2 = Math.min(a[2], b[2]), y2 = Math.min(a[3], b[3]);
+      const iw = Math.max(0, x2 - x1), ih = Math.max(0, y2 - y1), inter = iw * ih;
+      const ua = (a[2]-a[0])*(a[3]-a[1]) + (b[2]-b[0])*(b[3]-b[1]) - inter;
+      return ua > 0 ? inter / ua : 0;
+    }
+
+    function nms(dets, thr) {
+      dets.sort((a, b) => b.conf - a.conf);
+      const keep = [];
+      dets.forEach(d => {
+        for (let i = 0; i < keep.length; i++) {
+          if (iou(keep[i].box, d.box) > thr) return;
+        }
+        keep.push(d);
+      });
+      return keep;
+    }
+
+    // Handles both YOLOv8-detect [1, 5, 8400] and YOLOv8-seg [1, 37, 8400] models
+    function decodeYolo(data, dims, scale, padX, padY, W, H, confThr) {
+      const a = dims[1], b = dims[2], chFirst = a < b;
+      const nCh = chFirst ? a : b, N = chFirst ? b : a, out = [];
+      function g(i, c) { return chFirst ? data[c * N + i] : data[i * nCh + c]; }
+
+      // If nCh is 37 (segmentation model with 1 class), class count is 1 (index 4)
+      const numClasses = (nCh === 37) ? 1 : Math.max(1, nCh - 4);
+
+      for (let i = 0; i < N; i++) {
+        let best = 0, bc = -1;
+        if (numClasses === 1) {
+          best = g(i, 4);
+          bc = 0;
+        } else {
+          for (let c = 4; c < 4 + numClasses; c++) {
+            const s = g(i, c);
+            if (s > best) { best = s; bc = c - 4; }
+          }
+        }
+
+        if (best < confThr) continue;
+
+        const cx = g(i, 0), cy = g(i, 1), w = g(i, 2), h = g(i, 3);
+        let x1 = (cx - w / 2 - padX) / scale;
+        let y1 = (cy - h / 2 - padY) / scale;
+        let x2 = (cx + w / 2 - padX) / scale;
+        let y2 = (cy + h / 2 - padY) / scale;
+
+        x1 = Math.max(0, Math.min(W, x1));
+        x2 = Math.max(0, Math.min(W, x2));
+        y1 = Math.max(0, Math.min(H, y1));
+        y2 = Math.max(0, Math.min(H, y2));
+        if (x2 - x1 < 3 || y2 - y1 < 3) continue;
+
+        out.push({ box: [x1, y1, x2, y2], conf: best, cls: bc });
+      }
+      return nms(out, 0.45);
+    }
+
+    function severityFromWidth(wM) {
+      if (wM < 0.30) return { label: "Low", cls: "tag-low", estCost: 1500 };
+      if (wM < 0.60) return { label: "Medium", cls: "tag-mid", estCost: 4500 };
+      return { label: "High", cls: "tag-high", estCost: 9500 };
+    }
+
+    function warrantyFor(road, nowMs) {
+      if (!road) return null;
+      const d = road.completed ? new Date(road.completed) : null;
+      const y = Number(road.dlpYears);
+      if (!d || isNaN(d.getTime()) || !isFinite(y) || y <= 0) {
+        return { under: null, end: null, daysLeft: null, unknown: true };
+      }
+      const end = new Date(d.getTime());
+      end.setFullYear(end.getFullYear() + y);
+      const under = nowMs <= end.getTime();
+      return {
+        under,
+        end: end.toISOString().slice(0, 10),
+        daysLeft: Math.ceil((end.getTime() - nowMs) / 864e5),
+        unknown: false
+      };
+    }
+
+    // --- Audio Feedback (Beep on defect detection) ---
+    function triggerAlertBeep() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(750, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } catch (e) {}
+    }
+
+    // --- Interactive Leaflet Map ---
+    function initMap() {
+      if (typeof L === "undefined") return;
+      const defaultPos = [19.1334, 72.9133]; // IIT Bombay coordinates
+      map = L.map("mapContainer", { zoomControl: false }).setView(defaultPos, 14);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      L.control.zoom({ position: "topright" }).addTo(map);
+
+      // Vehicle location marker
+      const carIcon = L.divIcon({
+        className: 'car-icon',
+        html: '<div style="background:#ff5722; width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #ff5722;"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      carMarker = L.marker(defaultPos, { icon: carIcon }).addTo(map);
+      carMarker.bindPopup("<b>Vehicle Position</b><br>IIT Bombay Techfest Venue");
+
+      potholeMarkersLayer = L.layerGroup().addTo(map);
+
+      // Allow clicking map to set manual location
+      map.on("click", function(e) {
+        $("mlat").value = e.latlng.lat.toFixed(6);
+        $("mlng").value = e.latlng.lng.toFixed(6);
+        updateCarMarker(e.latlng.lat, e.latlng.lng, num("mhead", 0));
+        updateRoadHint();
+      });
+    }
+
+    function updateCarMarker(lat, lng, heading) {
+      if (!carMarker || !map) return;
+      carMarker.setLatLng([lat, lng]);
+      $("hudHeading").textContent = `HDG: ${Math.round(heading)}°`;
+    }
+
+    function addPotholeToMap(rec) {
+      if (!rec.lat || !rec.lng || !potholeMarkersLayer) return;
+      const color = rec.sev === "High" ? "#ef4444" : (rec.sev === "Medium" ? "#f59e0b" : "#10b981");
+      const icon = L.divIcon({
+        className: 'ph-icon',
+        html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 8px ${color};"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      });
+
+      const marker = L.marker([rec.lat, rec.lng], { icon: icon }).addTo(potholeMarkersLayer);
+      const popupContent = `
+        <div style="font-family:system-ui; font-size:12px; line-height:1.4;">
+          <b style="color:${color};">${rec.id} (${rec.sev} Severity)</b><br>
+          <b>Width:</b> ~${rec.widthM.toFixed(2)} m<br>
+          <b>Road:</b> ${rec.road ? esc(rec.road.name) : "Unassigned"}<br>
+          <b>Liability:</b> ${rec.under === true ? '<span style="color:#10b981">Contractor Liable (DLP)</span>' : '<span style="color:#ef4444">PWD Budget</span>'}
+        </div>
+      `;
+      marker.bindPopup(popupContent);
+    }
+
+    // --- Camera Feed with Mobile Fixes ---
+    async function startCamera() {
+      // Check for HTTPS secure context
+      if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        $("permModalMsg").textContent = "Camera access requires HTTPS or localhost. If you are opening this via your phone's local network IP, mobile browsers block WebRTC camera access. Deploying to Vercel provides a free HTTPS URL with full camera support.";
+        $("permModal").hidden = false;
+      }
+
+      const tries = [
+        { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+        { video: { facingMode: { ideal: currentFacingMode } }, audio: false },
+        { video: { facingMode: currentFacingMode }, audio: false },
+        { video: true, audio: false }
+      ];
+
+      stopStream();
+      tracks = [];
+      let newStream = null;
+
+      for (const constraint of tries) {
+        try {
+          newStream = await navigator.mediaDevices.getUserMedia(constraint);
+          if (newStream) break;
+        } catch (e) {
+          console.warn("Camera constraint attempt failed:", constraint, e);
+        }
+      }
+
+      if (!newStream) {
+        alert("Could not access camera. Please ensure camera permissions are allowed in your browser settings.");
+        return;
+      }
+
+      stream = newStream;
+      video.removeAttribute("src");
+      video.loop = false;
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
+      video.setAttribute("autoplay", "true");
+      video.muted = true;
+      video.srcObject = stream;
+
+      try {
+        await video.play();
+        $("camBtn").textContent = "Stop Camera";
+        $("emptyStage").classList.add("hidden");
+      } catch (err) {
+        console.error("Video play error:", err);
+      }
+    }
+
+    function stopStream() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      $("camBtn").textContent = "Use Camera";
+    }
+
+    $("camBtn").onclick = function() {
+      if (stream) stopStream();
+      else startCamera();
+    };
+
+    $("flipCamBtn").onclick = function() {
+      currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+      if (stream) startCamera();
+    };
+
+    $("sampleVidBtn").onclick = async function() {
+      stopStream();
+      tracks = [];
+      video.srcObject = null;
+      video.src = "sample-road-video.mp4";
+      video.loop = true;
+      video.setAttribute("playsinline", "true");
+      video.muted = true;
+      try {
+        await video.play();
+        $("emptyStage").classList.add("hidden");
+        if (!detecting) $("runBtn").click();
+      } catch (e) {
+        alert("Sample video could not be loaded: " + e.message);
+      }
+    };
+
+    $("vidFile").onchange = async function(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      stopStream();
+      tracks = [];
+      video.srcObject = null;
+      video.src = URL.createObjectURL(f);
+      video.loop = true;
+      video.setAttribute("playsinline", "true");
+      try {
+        await video.play();
+        $("emptyStage").classList.add("hidden");
+      } catch (err) {}
+    };
+
+    video.onloadedmetadata = function() {
+      W = video.videoWidth || 1280;
+      H = video.videoHeight || 720;
+      ov.width = W;
+      ov.height = H;
+      $("stage").style.aspectRatio = `${W} / ${H}`;
+      $("emptyStage").classList.add("hidden");
+    };
+
+    // --- Robust Geolocation Engine ---
+    $("gpsBtn").onclick = function() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        gps = null;
+        $("gpsBtnLabel").textContent = "Start Live GPS";
+        $("gpsStatusText").textContent = "GPS offline.";
+        $("pillGps").className = "pill";
+        $("pillGpsText").textContent = "GPS Off";
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        $("gpsStatusText").textContent = "Geolocation is not supported by your browser.";
+        return;
+      }
+
+      $("gpsStatusText").textContent = "Acquiring GPS fix (satellite lock)...";
+      $("pillGps").className = "pill warn";
+      $("pillGpsText").textContent = "Locating...";
+
+      // Step 1: Quick coarse fix
+      navigator.geolocation.getCurrentPosition(
+        onGpsSuccess,
+        err => console.log("Coarse GPS fallback:", err.message),
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+
+      // Step 2: Continuous high-accuracy tracking
+      watchId = navigator.geolocation.watchPosition(
+        onGpsSuccess,
+        onGpsError,
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 25000 }
+      );
+    };
+
+    function onGpsSuccess(p) {
+      gps = {
+        lat: p.coords.latitude,
+        lng: p.coords.longitude,
+        acc: p.coords.accuracy,
+        heading: p.coords.heading,
+        speed: p.coords.speed
+      };
+
+      $("gpsBtnLabel").textContent = "Stop Live GPS";
+      const spdKmh = (gps.speed && gps.speed > 0) ? (gps.speed * 3.6).toFixed(1) : "0.0";
+      $("hudSpeed").textContent = `SPEED: ${spdKmh} km/h`;
+      $("gpsStatusText").textContent = `${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${Math.round(gps.acc)} m) · ${spdKmh} km/h`;
+      
+      $("pillGps").className = "pill active";
+      $("pillGpsText").textContent = `GPS Fix (±${Math.round(gps.acc)}m)`;
+
+      updateCarMarker(gps.lat, gps.lng, gps.heading || num("mhead", 0));
+      updateRoadHint();
+    }
+
+    function onGpsError(err) {
+      console.warn("GPS watch position notice:", err);
+      if (err.code === 1) {
+        $("gpsStatusText").textContent = "GPS permission denied. Please allow location in browser.";
+        $("pillGps").className = "pill";
+        $("pillGpsText").textContent = "GPS Denied";
+      } else if (err.code === 3) {
+        $("gpsStatusText").textContent = "GPS weak signal indoors. Retrying with network location...";
+        navigator.geolocation.getCurrentPosition(onGpsSuccess, null, { enableHighAccuracy: false, timeout: 15000 });
+      }
+    }
+
+    function currentLoc() {
+      if (gps) {
+        const hd = (gps.speed > 1 && isFinite(gps.heading)) ? gps.heading : num("mhead", 0);
+        return { lat: gps.lat, lng: gps.lng, heading: hd, live: true };
+      }
+      const la = parseFloat($("mlat").value), lo = parseFloat($("mlng").value);
+      if (isFinite(la) && isFinite(lo)) {
+        return { lat: la, lng: lo, heading: num("mhead", 0), live: false };
+      }
+      return null;
+    }
+
+    // --- Road Matching & OpenStreetMap Reverse Lookup ---
+    function resolveRoad(loc) {
+      const sel = $("roadSel").value;
+      if (sel !== "auto") {
+        return ROADS.find(r => r.id === sel) || null;
+      }
+      if (!loc) return null;
+      let best = null, bd = 3000; // 3km threshold
+      ROADS.forEach(r => {
+        let d = Infinity;
+        if (r.path && r.path.length) d = distToPolylineM(loc.lat, loc.lng, r.path);
+        else if (isFinite(r.lat) && isFinite(r.lng)) d = haversineM(loc.lat, loc.lng, r.lat, r.lng);
+        if (d < bd) { bd = d; best = r; }
+      });
+      return best;
+    }
+
+    function updateRoadHint() {
+      const loc = currentLoc();
+      if (!loc) {
+        $("hudRoad").textContent = "ROAD: Set Location";
+        $("roadMatchHint").textContent = "Auto road matching needs a position: turn on GPS or use Manual location.";
+        return;
+      }
+      const r = resolveRoad(loc);
+      if (r) {
+        $("hudRoad").textContent = `ROAD: ${r.name.slice(0, 24)}...`;
+        const w = warrantyFor(r, Date.now());
+        const wStatus = w ? (w.under ? "🟢 Under DLP Warranty" : "🔴 Warranty Expired") : "⚪ Warranty Unknown";
+        $("roadMatchHint").innerHTML = `<b>Matched:</b> ${esc(r.name)}<br><b>Contractor:</b> ${esc(r.contractor)} · <b>Status:</b> ${wStatus}`;
+      } else {
+        $("hudRoad").textContent = "ROAD: Unmapped Area";
+        $("roadMatchHint").textContent = "No specific highway contract found within 3 km. Select road manually or edit JSON.";
+      }
+    }
+
+    function fillRoadSelectors() {
+      let opt = '<option value="auto">Auto (Detect Road from GPS / Location)</option>';
+      ROADS.forEach(r => {
+        opt += `<option value="${esc(r.id)}">${esc(r.name)}</option>`;
+      });
+      $("roadSel").innerHTML = opt;
+
+      let demoOpt = '<option value="">Select Venue / Demo Road...</option>';
+      ROADS.forEach((r, idx) => {
+        demoOpt += `<option value="${idx}">${esc(r.name)}</option>`;
+      });
+      $("demoRoadSel").innerHTML = demoOpt;
+    }
+
+    $("demoRoadSel").onchange = function() {
+      const idx = parseInt($("demoRoadSel").value, 10);
+      const r = ROADS[idx];
+      if (!r) return;
+      const pt = (r.path && r.path.length) ? r.path[0] : [r.lat, r.lng];
+      $("mlat").value = pt[0];
+      $("mlng").value = pt[1];
+      if (r.path && r.path.length > 1) {
+        const b = r.path[1];
+        const hd = (Math.atan2((b[1] - pt[1]) * Math.cos(pt[0] * Math.PI / 180), b[0] - pt[0]) * 180 / Math.PI + 360) % 360;
+        $("mhead").value = Math.round(hd);
+      }
+      updateCarMarker(pt[0], pt[1], num("mhead", 0));
+      $("roadSel").value = r.id;
+      updateRoadHint();
+    };
+
+    // --- ONNX Model Engine & IndexedDB Caching ---
+    function idb() {
+      return new Promise((res, rej) => {
+        if (typeof indexedDB === "undefined") return rej();
+        const r = indexedDB.open("veridex-pothole-db", 1);
+        r.onupgradeneeded = () => { r.result.createObjectStore("models"); };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    }
+
+    function saveModelToCache(name, buf, ver) {
+      idb().then(db => {
+        db.transaction("models", "readwrite").objectStore("models").put({ name, buf, ver }, "active_model");
+      }).catch(() => {});
+    }
+
+    function loadModelFromCache() {
+      return idb().then(db => new Promise(res => {
+        const q = db.transaction("models").objectStore("models").get("active_model");
+        q.onsuccess = () => res(q.result || null);
+        q.onerror = () => res(null);
+      })).catch(() => null);
+    }
+
+    async function loadModel(buf, name, fromSaved) {
+      try {
+        if (typeof ort === "undefined") throw new Error("ONNX Runtime Web library did not load.");
+        ort.env.wasm.wasmPaths = CDN_ORT;
+        ort.env.wasm.numThreads = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2)));
+        ort.env.wasm.proxy = false; // direct thread execution
+
+        $("modelStatus").textContent = "Initializing neural network weights...";
+        session = await ort.InferenceSession.create(new Uint8Array(buf), { executionProviders: ["wasm"] });
+
+        // Warm-up inference
+        const warmup = {};
+        warmup[session.inputNames[0]] = new ort.Tensor("float32", new Float32Array(3 * 640 * 640), [1, 3, 640, 640]);
+        await session.run(warmup);
+
+        if (!fromSaved) saveModelToCache(name, buf.slice(0), MODEL_VER);
+
+        $("pillModel").className = "pill active";
+        $("pillModelText").textContent = "AI Ready";
+        $("modelStatus").innerHTML = `Model ready: <b>${esc(name)}</b>${fromSaved ? " (Cached offline)" : ""}. Press <b>Start Detecting</b>.`;
+      } catch (err) {
+        session = null;
+        $("pillModel").className = "pill";
+        $("pillModelText").textContent = "Model Error";
+        $("modelStatus").textContent = `Error loading model: ${err.message}`;
+      }
+    }
+
+    async function downloadModelWithProgress() {
+      const r = await fetch(MODEL_URL, { cache: "no-cache" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const ct = r.headers.get("content-type") || "";
+      if (/text\/html/i.test(ct)) throw new Error("Model file not found on host");
+
+      const total = parseInt(r.headers.get("content-length") || "0", 10);
+      let got = 0;
+      const parts = [];
+
+      $("modelBar").hidden = false;
+
+      if (r.body && r.body.getReader) {
+        const rd = r.body.getReader();
+        while (true) {
+          const { done, value } = await rd.read();
+          if (done) break;
+          parts.push(value);
+          got += value.length;
+          if (total > 0) {
+            const pct = Math.round((got / total) * 100);
+            $("modelBarFill").style.width = `${pct}%`;
+            $("modelStatus").textContent = `Downloading edge AI model... ${pct}% (${(got/1048576).toFixed(1)} / ${(total/1048576).toFixed(1)} MB)`;
+          }
+        }
+      } else {
+        const ab = await r.arrayBuffer();
+        parts.push(new Uint8Array(ab));
+        got = ab.byteLength;
+      }
+
+      $("modelBar").hidden = true;
+      const out = new Uint8Array(got);
+      let off = 0;
+      parts.forEach(c => { out.set(c, off); off += c.length; });
+      return out.buffer;
+    }
+
+    async function bootModel() {
+      const cached = await loadModelFromCache();
+      if (cached && cached.buf && cached.ver === MODEL_VER) {
+        await loadModel(cached.buf, cached.name, true);
+        return;
+      }
+      try {
+        const buf = await downloadModelWithProgress();
+        await loadModel(buf, MODEL_URL, false);
+      } catch (e) {
+        $("modelBar").hidden = true;
+        if (cached && cached.buf) {
+          await loadModel(cached.buf, cached.name, true);
+        } else {
+          $("modelStatus").innerHTML = `Could not auto-download <b>${MODEL_URL}</b>. You can load it manually using the <b>Custom Model</b> button.`;
+        }
+      }
+    }
+
+    $("modelFile").onchange = async function(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      await loadModel(await f.arrayBuffer(), f.name, false);
+    };
+
+    // --- Detection Inference Loop ---
+    $("runBtn").onclick = function() {
+      if (!detecting) {
+        if (!session) {
+          alert("Neural network model is not ready yet. Please wait for download or load pothole.onnx.");
+          return;
+        }
+        tracks = [];
+        detecting = true;
+        $("runBtn").innerHTML = "<span>⏹</span> Stop Detecting";
+        detectLoop();
+      } else {
+        detecting = false;
+        $("runBtn").innerHTML = "<span>▶</span> Start Detecting";
+      }
+    };
+
+    async function detectLoop() {
+      while (detecting) {
+        try {
+          await detectFrame();
+        } catch (e) {
+          console.error("Inference loop error:", e);
+          detecting = false;
+          $("runBtn").innerHTML = "<span>▶</span> Start Detecting";
+          break;
+        }
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+
+    function confThreshold() {
+      const s = $("sens").value;
+      if (s === "low") return 0.65;
+      if (s === "high") return 0.35;
+      return 0.50;
+    }
+
+    function takeSnapshot() {
+      const bw = Math.min(W, 1280), bh = Math.round(bw * H / W);
+      if (snap.width !== bw || snap.height !== bh) { snap.width = bw; snap.height = bh; }
+      sctx.drawImage(video, 0, 0, bw, bh);
+    }
+
+    async function detectFrame() {
+      if (video.readyState < 2 || video.paused || video.ended) {
+        await new Promise(r => setTimeout(r, 50));
+        return;
+      }
+
+      const sc = Math.min(640 / W, 640 / H);
+      const nw = Math.round(W * sc), nh = Math.round(H * sc);
+      const px = (640 - nw) / 2, py = (640 - nh) / 2;
+
+      takeSnapshot();
+
+      pctx.fillStyle = "#727272";
+      pctx.fillRect(0, 0, 640, 640);
+      pctx.drawImage(snap, px, py, nw, nh);
+
+      const imgData = pctx.getImageData(0, 0, 640, 640).data;
+      const n = 640 * 640;
+
+      if (inBuf.length !== 3 * n) inBuf = new Float32Array(3 * n);
+      for (let i = 0; i < n; i++) {
+        inBuf[i] = imgData[i * 4] / 255;
+        inBuf[n + i] = imgData[i * 4 + 1] / 255;
+        inBuf[2 * n + i] = imgData[i * 4 + 2] / 255;
+      }
+
+      const feeds = {};
+      feeds[session.inputNames[0]] = new ort.Tensor("float32", inBuf, [1, 3, 640, 640]);
+
+      const t0 = performance.now();
+      const res = await session.run(feeds);
+      infMs = performance.now() - t0;
+
+      const outTensor = res[session.outputNames[0]];
+      const dets = decodeYolo(outTensor.data, outTensor.dims, sc, px, py, W, H, confThreshold());
+
+      updateTracking(dets);
+
+      fpsCount++;
+      const now = performance.now();
+      if (now - fpsTimer >= 1000) {
+        const fps = (fpsCount * 1000 / (now - fpsTimer)).toFixed(1);
+        $("pillFpsText").textContent = `${fps} FPS`;
+        fpsCount = 0;
+        fpsTimer = now;
+      }
+    }
+
+    // --- Defect Multi-Frame Tracking & Deduplication ---
+    function updateTracking(dets) {
+      tracks.forEach(t => t.matched = false);
+
+      dets.forEach(d => {
+        let best = null, bestScore = 0;
+        tracks.forEach(t => {
+          if (t.matched) return;
+          const s = iou(t.box, d.box);
+          if (s > bestScore) { bestScore = s; best = t; }
+        });
+
+        if (best && bestScore > 0.15) {
+          best.box = d.box;
+          best.hits++;
+          best.confSum += d.conf;
+          best.misses = 0;
+          best.matched = true;
+          best.last = d;
+        } else {
+          tracks.push({
+            id: nextTrackId++,
+            box: d.box,
+            dbox: d.box.slice(),
+            hits: 1,
+            confSum: d.conf,
+            misses: 0,
+            matched: true,
+            logged: false,
+            last: d
+          });
+        }
+      });
+
+      const keep = [];
+      tracks.forEach(t => {
+        if (!t.matched) t.misses++;
+        if (t.matched && t.hits >= 2 && (t.confSum / t.hits) >= confThreshold()) {
+          if (!t.rec) t.rec = logPothole(t.box, t.confSum / t.hits, snap);
+        }
+        if (t.misses <= 5) keep.push(t);
+      });
+      tracks = keep;
+    }
+
+    // --- Ground Metric Measurement & Audit Logging ---
+    function makePhotos(src, box) {
+      const kb = src.width / W;
+      const bc = document.createElement("canvas");
+      bc.width = src.width;
+      bc.height = src.height;
+      const bx = bc.getContext("2d");
+      bx.drawImage(src, 0, 0);
+
+      // Bounding box overlay
+      bx.strokeStyle = "#ff3b30";
+      bx.lineWidth = Math.max(3, src.width / 320);
+      bx.strokeRect(box[0] * kb, box[1] * kb, (box[2] - box[0]) * kb, (box[3] - box[1]) * kb);
+
+      // Thumbnail
+      const th = document.createElement("canvas");
+      th.width = 240;
+      th.height = Math.round(240 * H / W);
+      th.getContext("2d").drawImage(bc, 0, 0, th.width, th.height);
+
+      return {
+        thumb: th.toDataURL("image/jpeg", 0.75),
+        big: bc.toDataURL("image/jpeg", 0.88)
+      };
+    }
+
+    function logPothole(box, conf, src) {
+      const f = focalFromFov(W, num("fov", 70));
+      const gp = groundPoint(
+        (box[0] + box[2]) / 2,
+        box[3],
+        f,
+        W / 2,
+        H / 2,
+        num("camH", 1.2),
+        num("tilt", 10),
+        25
+      );
+
+      if (!gp || !gp.ok) return null;
+
+      const loc = currentLoc();
+      const geo = loc ? toGeoM(loc.lat, loc.lng, loc.heading, gp.side, gp.fwd) : null;
+
+      // Spatial Deduplication (merge sightings within 3m)
+      if (geo && loc && loc.live) {
+        for (let p of potholes) {
+          if (p.lat !== null && haversineM(p.lat, p.lng, geo.lat, geo.lng) <= 3.0) {
+            p.seen++;
+            renderAuditTable();
+            return p;
+          }
+        }
+      }
+
+      const wM = (box[2] - box[0]) * gp.depth / f;
+      const sev = severityFromWidth(wM);
+      const road = resolveRoad(loc);
+      const w = warrantyFor(road, Date.now());
+      const ph = makePhotos(src, box);
+
+      const rec = {
+        id: `PH-${Date.now().toString().slice(-6)}-${potholes.length + 1}`,
+        time: new Date().toLocaleTimeString("en-IN", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        date: new Date().toISOString().slice(0, 10),
+        lat: geo ? geo.lat : null,
+        lng: geo ? geo.lng : null,
+        fwd: gp.fwd,
+        side: gp.side,
+        widthM: wM,
+        sev: sev.label,
+        sevCls: sev.cls,
+        estCost: sev.estCost,
+        conf,
+        seen: 1,
+        road,
+        under: w ? w.under : null,
+        end: w ? w.end : null,
+        contractor: road ? road.contractor : "Unknown",
+        authority: road ? road.authority : "Local Road Authority",
+        thumb: ph.thumb,
+        big: ph.big
+      };
+
+      potholes.unshift(rec);
+      triggerAlertBeep();
+      addPotholeToMap(rec);
+      renderAuditTable();
+      updateKpis();
+      return rec;
+    }
+
+    // --- Table Rendering & Official Notices ---
+    function generateOfficialNotice(p) {
+      return `=====================================================
+GOVERNMENT ROAD DEFECT & DLP REPAIR ENFORCEMENT NOTICE
+Issued via VERIDEX AI Automated Infrastructure Audit Engine
+Venue: Techfest IIT Bombay 2026 Showcase
+=====================================================
+DEFECT AUDIT ID: ${p.id}
+Timestamp: ${p.date} ${p.time}
+Monitored Highway / Corridor: ${p.road ? p.road.name : "Unassigned Road Corridor"}
+Authority in Charge: ${p.authority}
+Contractor on Record: ${p.contractor}
+
+DEFECT PHOTOGRAMMETRIC DATA:
+- Geographic Coordinates: ${p.lat !== null ? `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}` : "Manual Calibration"}
+- Real Metric Width: ${p.widthM.toFixed(2)} m (Severity: ${p.sev})
+- Forward Distance from Vehicle: ${p.fwd.toFixed(1)} m | Lateral Offset: ${p.side.toFixed(1)} m ${p.side >= 0 ? "Right" : "Left"}
+- Model Confidence: ${(p.conf * 100).toFixed(0)}%
+
+DEFECT LIABILITY CLAUSE (DLP) & WARRANTY STATUS:
+${p.under === true ? `STATUS: UNDER ACTIVE DLP WARRANTY (Expires ${p.end})
+LEGAL ACTION: Contractor (${p.contractor}) is legally bound under IRC/MoRTH/NHAI Defect Liability terms to repair this pothole within 72 hours at zero cost to the public exchequer.` : (p.under === false ? `STATUS: WARRANTY EXPIRED (Expired ${p.end})
+ACTION: Routed to ${p.authority} for routine municipal maintenance allocation.` : "STATUS: CONTRACT NOT IN LOCAL DATABASE\nACTION: Authority to verify completion certificate and warranty terms.")}
+
+Google Maps Inspection Link:
+https://www.google.com/maps?q=${p.lat},${p.lng}
+=====================================================`;
+    }
+
+    window.copyNotice = function(idx) {
+      const p = potholes[idx];
+      if (!p) return;
+      navigator.clipboard.writeText(generateOfficialNotice(p))
+        .then(() => alert(`Official enforcement notice for ${p.id} copied to clipboard!`))
+        .catch(() => alert("Failed to copy notice."));
+    };
+
+    window.dispatchWhatsApp = function(idx) {
+      const p = potholes[idx];
+      if (!p) return;
+      const text = encodeURIComponent(`*VERIDEX ROAD AUDIT REPORT: ${p.id}*\nRoad: ${p.road ? p.road.name : "Unassigned"}\nSeverity: ${p.sev} (~${p.widthM.toFixed(2)}m)\nContractor: ${p.contractor}\nWarranty Status: ${p.under === true ? "UNDER DLP (Contractor Liable)" : "PWD Maintenance"}\nLocation: https://www.google.com/maps?q=${p.lat},${p.lng}`);
+      window.open(`https://wa.me/?text=${text}`, "_blank");
+    };
+
+    function renderAuditTable() {
+      $("count").textContent = potholes.length;
+      $("none").style.display = potholes.length ? "none" : "block";
+
+      $("rows").innerHTML = potholes.map((p, idx) => {
+        const wBadge = (p.under === true)
+          ? `<span class="tag tag-w-ok">Under DLP Warranty</span>`
+          : (p.under === false ? `<span class="tag tag-w-bad">Warranty Expired</span>` : `<span class="tag tag-w-unk">Warranty Unknown</span>`);
+
+        const geoStr = (p.lat !== null)
+          ? `<a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" style="color:var(--info); text-decoration:none;">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)} ↗</a>`
+          : `<span style="color:var(--mu)">No GPS fix</span>`;
+
+        return `
+          <tr>
+            <td>
+              <img src="${p.thumb}" alt="Snapshot" onclick="openLightbox('${p.id}')">
+            </td>
+            <td>
+              <b>${esc(p.id)}</b><br>
+              <span class="tag ${p.sevCls}">${p.sev}</span> ~${p.widthM.toFixed(2)} m<br>
+              <span class="help-text">Conf: ${(p.conf * 100).toFixed(0)}% · Seen: ${p.seen}×</span>
+            </td>
+            <td>
+              ${p.fwd.toFixed(1)}m fwd · ${Math.abs(p.side).toFixed(1)}m ${p.side >= 0 ? "R" : "L"}<br>
+              ${geoStr}
+            </td>
+            <td>
+              ${wBadge}<br>
+              <span style="font-weight:600;">${p.road ? esc(p.road.name) : "Road Not Assigned"}</span><br>
+              <span class="help-text">Contractor: ${esc(p.contractor)}</span>
+            </td>
+            <td>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="secondary sm" onclick="copyNotice(${idx})">📋 Copy Notice</button>
+                <button class="secondary sm" onclick="dispatchWhatsApp(${idx})">💬 WhatsApp</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function updateKpis() {
+      $("kpiTotal").textContent = potholes.length;
+      $("kpiHigh").textContent = potholes.filter(p => p.sev === "High").length;
+      $("kpiUnder").textContent = potholes.filter(p => p.under === true).length;
+      const totalCost = potholes.reduce((acc, p) => acc + (p.under === true ? p.estCost : 0), 0);
+      $("kpiCost").textContent = `₹${totalCost.toLocaleString("en-IN")}`;
+    }
+
+    // --- Lightbox Inspector ---
+    window.openLightbox = function(id) {
+      const p = potholes.find(x => x.id === id);
+      if (!p) return;
+      $("lbImg").src = p.big;
+      $("lbCaption").textContent = `${p.id} — ${p.sev} Severity (~${p.widthM.toFixed(2)}m width, ${p.fwd.toFixed(1)}m ahead)`;
+      $("lbDownload").href = p.big;
+      $("lbDownload").download = `${p.id}.jpg`;
+      $("lb").hidden = false;
+    };
+
+    $("lbClose").onclick = () => { $("lb").hidden = true; };
+    $("permModalClose").onclick = () => { $("permModal").hidden = true; };
+
+    // --- Pothole Simulator for Presentations / Testing ---
+    $("simulateBtn").onclick = function() {
+      takeSnapshot();
+      const mockBox = [W * 0.4, H * 0.55, W * 0.6, H * 0.75];
+      logPothole(mockBox, 0.94, snap);
+      flashes.push({ box: mockBox, t: performance.now() });
+    };
+
+    // --- Overlay HUD Drawing (Boxes, Guides, Horizon) ---
+    function drawGuides(fs, lw) {
+      const f = focalFromFov(W, num("fov", 70));
+      const h = num("camH", 1.2);
+      const th = num("tilt", 10);
+      ctx.lineWidth = lw;
+
+      // Horizon line
+      const vh = H / 2 - f * Math.tan(th * Math.PI / 180);
+      if (vh > 0 && vh < H) {
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.75)";
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(0, vh);
+        ctx.lineTo(W, vh);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(239, 68, 68, 0.9)";
+        ctx.fillText("HORIZON", 10, vh - 6);
+      }
+
+      // Distance markers: 3m, 5m, 10m, 20m ahead on flat road
+      [3, 5, 10, 20].forEach(d => {
+        const v = rowForDistance(d, f, H / 2, h, th);
+        if (v > 0 && v < H) {
+          ctx.strokeStyle = "rgba(16, 185, 129, 0.55)";
+          ctx.beginPath();
+          ctx.moveTo(W * 0.25, v);
+          ctx.lineTo(W * 0.75, v);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(16, 185, 129, 0.9)";
+          ctx.fillText(`${d} m`, W * 0.75 + 10, v + fs / 3);
+        }
+      });
+    }
+
+    function renderHUD() {
+      ctx.clearRect(0, 0, W, H);
+      const lw = Math.max(2, W / 480);
+      const fs = Math.max(12, Math.round(W / 65));
+      ctx.font = `700 ${fs}px ui-monospace, Menlo, Consolas, sans-serif`;
+
+      if ($("guides").checked) drawGuides(fs, lw);
+
+      // Render tracked bounding boxes
+      ctx.lineWidth = lw + 1;
+      tracks.forEach(t => {
+        if (!t.rec || t.misses > 2) return;
+        const b = t.dbox;
+        for (let i = 0; i < 4; i++) b[i] += (t.box[i] - b[i]) * 0.45; // Smooth interpolation
+
+        const color = t.rec.sev === "High" ? "#ef4444" : (t.rec.sev === "Medium" ? "#f59e0b" : "#10b981");
+        ctx.strokeStyle = color;
+        ctx.strokeRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+
+        // Label tag
+        const text = `POTHOLE · ${t.rec.sev.toUpperCase()} (~${t.rec.widthM.toFixed(2)}m)`;
+        const tw = ctx.measureText(text).width + 12;
+        const th = fs + 8;
+        const ty = b[1] >= th ? b[1] - th : b[1];
+
+        ctx.fillStyle = color;
+        ctx.fillRect(b[0] - lw / 2, ty, tw, th);
+        ctx.fillStyle = "#0a0d14";
+        ctx.fillText(text, b[0] + 6, ty + th - 6);
+      });
+
+      // Simulation flashes
+      const now = performance.now();
+      flashes = flashes.filter(f => now - f.t < 1500);
+      flashes.forEach(f => {
+        ctx.strokeStyle = "#10b981";
+        ctx.strokeRect(f.box[0], f.box[1], f.box[2] - f.box[0], f.box[3] - f.box[1]);
+      });
+
+      requestAnimationFrame(renderHUD);
+    }
+
+    // --- CSV Export ---
+    $("csvBtn").onclick = function() {
+      if (!potholes.length) { alert("No pothole audit data to export."); return; }
+      const q = s => `"${String(s).replace(/"/g, '""')}"`;
+      const header = "id,timestamp,date,latitude,longitude,forward_m,lateral_m,width_m,severity,confidence,sightings,road_name,authority,contractor,dlp_warranty_status,dlp_expiry_date,estimated_repair_cost_inr";
+      const rows = potholes.map(p => [
+        q(p.id), q(p.time), q(p.date),
+        p.lat !== null ? p.lat.toFixed(7) : "",
+        p.lng !== null ? p.lng.toFixed(7) : "",
+        p.fwd.toFixed(2), p.side.toFixed(2), p.widthM.toFixed(2),
+        p.sev, (p.conf * 100).toFixed(1), p.seen,
+        q(p.road ? p.road.name : ""),
+        q(p.authority), q(p.contractor),
+        p.under === true ? "Under Warranty" : (p.under === false ? "Expired" : "Unknown"),
+        p.end || "", p.estCost
+      ].join(","));
+
+      const blob = new Blob([header + "\n" + rows.join("\n")], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `VERIDEX_Road_Audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    };
+
+    $("clearBtn").onclick = function() {
+      if (confirm("Clear all detected potholes and reset audit register?")) {
+        potholes = [];
+        tracks = [];
+        if (potholeMarkersLayer) potholeMarkersLayer.clearLayers();
+        renderAuditTable();
+        updateKpis();
+      }
+    };
+
+    // --- Initialization ---
+    fillRoadSelectors();
+    initMap();
+    renderHUD();
+    bootModel();
+
+    $("roadJson").value = JSON.stringify(ROADS, null, 2);
+    $("roadJson").onchange = function() {
+      try {
+        const j = JSON.parse($("roadJson").value);
+        if (Array.isArray(j)) {
+          ROADS = j;
+          fillRoadSelectors();
+          updateRoadHint();
+          $("jsonStatus").textContent = `Loaded ${ROADS.length} roads successfully.`;
+        }
+      } catch (e) {
+        $("jsonStatus").textContent = "Invalid JSON format: " + e.message;
+      }
+    };
+
+    // Save/Restore local settings
+    const SAVED_KEYS = ["camH", "tilt", "fov", "sens", "mlat", "mlng", "mhead"];
+    try {
+      const saved = JSON.parse(localStorage.getItem("veridex_settings") || "{}");
+      SAVED_KEYS.forEach(k => { if (saved[k] !== undefined) $(k).value = saved[k]; });
+      if (saved.guides !== undefined) $("guides").checked = saved.guides;
+    } catch (e) {}
+
+    function persistSettings() {
+      try {
+        const o = {};
+        SAVED_KEYS.forEach(k => o[k] = $(k).value);
+        o.guides = $("guides").checked;
+        localStorage.setItem("veridex_settings", JSON.stringify(o));
+      } catch (e) {}
+    }
+    SAVED_KEYS.forEach(k => $(k).onchange = persistSettings);
+    $("guides").onchange = persistSettings;
+
+  })();
+  </script>
+</body>
+</html>

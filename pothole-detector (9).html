@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pothole Detector – Road Coordinates & Warranty</title>
+<style>
+  :root{--bg:#0f1115;--card:#181b21;--bd:#2a2e37;--tx:#eceef2;--mu:#98a0ad;--ac:#ff7a33;--ok:#40c057;--bad:#ff6b6b;--mid:#f59f00}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--bd)}
+  h1{margin:0;font-size:19px}
+  header p{margin:2px 0 0;color:var(--mu);font-size:13px}
+  main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;padding:16px 20px;max-width:1300px;margin:0 auto}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+  .mt{margin-top:12px}
+  .stage{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+  video,canvas.ov{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  canvas.ov{cursor:crosshair}
+  .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mu);pointer-events:none}
+  button,label.btn{display:inline-block;padding:9px 14px;border:0;border-radius:9px;background:var(--ac);color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+  button.g,label.btn.g{background:#262a33;color:var(--tx);border:1px solid var(--bd)}
+  button.s{padding:6px 10px;font-size:12px}
+  button:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mu{color:var(--mu);font-size:13px}
+  h2{font-size:15px;margin:0 0 10px}
+  label{display:block;font-size:12px;color:var(--mu);margin:0 0 3px}
+  input[type=number],input[type=text],select,textarea{width:100%;padding:7px 8px;border:1px solid var(--bd);border-radius:8px;background:#0f1115;color:var(--tx);font:inherit}
+  textarea{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;min-height:120px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#10131a}
+  .t-ok{background:var(--ok)}.t-bad{background:var(--bad)}.t-mid{background:var(--mid)}.t-gray{background:#7b8494}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:6px;border-bottom:1px solid var(--bd);vertical-align:top}
+  th{color:var(--mu);font-weight:600}
+  .scroll{max-height:380px;overflow:auto}
+  td img{width:96px;border-radius:6px;display:block;cursor:zoom-in}
+  td img:hover{outline:2px solid var(--ac)}
+  .lb{position:fixed;inset:0;z-index:50;background:rgba(8,10,14,.94);display:flex;flex-direction:column}
+  .lb[hidden]{display:none}
+  .lb-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--bd)}
+  .lb-cap{font-size:13px;color:var(--tx)}
+  .lb-wrap{flex:1;overflow:auto;display:flex;padding:12px}
+  .lb-wrap img{margin:auto;max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;border-radius:6px}
+  .lb-wrap img.full{max-width:none;max-height:none;cursor:zoom-out}
+  a.btn{text-decoration:none}
+  .stat{font:600 12px ui-monospace,Menlo,Consolas,monospace;color:var(--mu)}
+  details{margin-top:10px;border-top:1px solid var(--bd);padding-top:8px}
+  details summary{cursor:pointer;color:var(--mu);font-size:13px}
+  details .in{margin-top:8px}
+  .chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--tx);margin:0}
+  .chk input{width:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>🕳️ Pothole Detector</h1>
+  <p>Finds potholes in video, works out where they are on the road, checks the warranty and prepares the complaint.</p>
+</header>
+
+<main>
+  <div>
+    <div class="card">
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="ov" class="ov"></canvas>
+        <div class="empty" id="empty">Use the camera or load a dashcam video to begin.</div>
+      </div>
+      <div class="row mt">
+        <button id="runBtn">Start detecting</button>
+        <button id="camBtn" class="g">Use camera</button>
+        <label class="btn g">Load video<input type="file" id="vidFile" accept="video/*" hidden></label>
+        <label class="btn g">Load model<input type="file" id="modelFile" accept=".onnx" hidden></label>
+      </div>
+      <div class="mu" id="modelStatus" style="margin-top:8px">No model loaded yet. Load your <b>pothole.onnx</b> once and it is remembered. You can also <b>click on the road</b> in the video to test everything without a model.</div>
+      <div class="stat" id="stats" style="margin-top:4px"></div>
+    </div>
+
+    <div class="card mt">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Detected potholes (<span id="count">0</span>)</h2>
+        <div class="row"><button class="g s" id="csvBtn">Download CSV</button><button class="g s" id="clearBtn">Clear</button></div>
+      </div>
+      <div class="scroll mt">
+        <table>
+          <thead><tr><th>Photo</th><th>Details</th><th>Position</th><th>Warranty &amp; routing</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="mu" id="none" style="padding:10px 0">Nothing detected yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Setup</h2>
+      <div class="g2">
+        <div><label for="camH">Camera height above road (m)</label><input type="number" id="camH" value="1.2" step="0.05" min="0.3" max="4"></div>
+        <div><label for="tilt">Tilt down from horizontal (°)</label><input type="number" id="tilt" value="10" step="0.5" min="0" max="60"></div>
+        <div><label for="sens">Sensitivity</label>
+          <select id="sens"><option value="low">Fewer alerts</option><option value="mid" selected>Balanced</option><option value="high">More alerts</option></select></div>
+        <div><label for="roadSel">Road</label><select id="roadSel"></select></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="g s" id="gpsBtn">Use live GPS</button>
+        <span class="mu" id="gpsMsg">GPS off</span>
+      </div>
+      <div class="mu" id="roadHint" style="margin-top:6px"></div>
+
+      <details><summary>Manual location (for recorded videos)</summary>
+        <div class="in g2">
+          <div><label for="mlat">Latitude</label><input type="number" id="mlat" step="any" placeholder="28.6139"></div>
+          <div><label for="mlng">Longitude</label><input type="number" id="mlng" step="any" placeholder="77.2090"></div>
+          <div><label for="mhead">Heading (° compass, 0=N, 90=E)</label><input type="number" id="mhead" value="0" step="1" min="0" max="359"></div>
+        </div>
+        <div class="in"><label for="demoRoad">Demo: put me on a road</label><select id="demoRoad"></select></div>
+        <p class="mu" style="margin:8px 0 0">Recorded video has no GPS, so type where the video starts and which way you were driving.</p>
+      </details>
+
+      <details><summary>Advanced</summary>
+        <div class="in">
+          <div class="g2">
+            <div><label for="fov">Camera field of view (°)</label><input type="number" id="fov" value="70" step="1" min="40" max="120"></div>
+            <div style="display:flex;align-items:end"><label class="chk"><input type="checkbox" id="guides"> Show distance guide lines</label></div>
+          </div>
+          <p class="mu" style="margin:8px 0 0">Guide lines mark the horizon and 3, 5, 10 and 20 m ahead on a flat road. Turn them on when setting up, and adjust height, tilt and field of view until the 5 m line sits on a marker you placed on the road.</p>
+          <label for="roadJson" style="margin-top:10px">Road / contract data (JSON). Leave completed and dlpYears empty if unknown</label>
+          <textarea id="roadJson" spellcheck="false"></textarea>
+          <div class="mu" id="roadMsg"></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</main>
+
+<div class="lb" id="lb" hidden>
+  <div class="lb-bar">
+    <span class="lb-cap" id="lbCap"></span>
+    <span class="row">
+      <button class="g s" id="lbPrev">‹ Newer</button>
+      <button class="g s" id="lbNext">Older ›</button>
+      <a class="btn g s" id="lbDl" download="pothole.jpg" href="#">Download</a>
+      <button class="g s" id="lbClose">Close ✕</button>
+    </span>
+  </div>
+  <div class="lb-wrap" id="lbWrap"><img id="lbImg" alt="Pothole photo" title="Click to zoom to full size"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+<script>
+/*PURE*/
+function focalFromFov(W, fovDeg){ return (W/2)/Math.tan(fovDeg*Math.PI/360); }
+
+// Flat-road projection. Camera at height h (m), pitched down by thetaDeg, focal length f (px).
+// Returns forward distance, sideways offset (right +), and ray length along the optical axis (depth).
+function groundPoint(u, v, f, cx, cy, h, thetaDeg, maxRange){
+  var th=thetaDeg*Math.PI/180, x=(u-cx)/f, y=(v-cy)/f;
+  var den=Math.sin(th)+y*Math.cos(th);
+  if(den<=1e-6) return null;                 // at or above the horizon
+  var t=h/den;
+  var fwd=t*(Math.cos(th)-y*Math.sin(th)), side=t*x;
+  return {fwd:fwd, side:side, depth:t, ok:(fwd>=0 && fwd<=maxRange)};
+}
+// Image row where a road point d metres ahead appears (inverse of the above)
+function rowForDistance(d, f, cy, h, thetaDeg){
+  var th=thetaDeg*Math.PI/180;
+  var y=(h*Math.cos(th)-d*Math.sin(th))/(d*Math.cos(th)+h*Math.sin(th));
+  return cy+f*y;
+}
+function toGeoM(lat0, lng0, headingDeg, sideM, fwdM){
+  var h=headingDeg*Math.PI/180;
+  var east=fwdM*Math.sin(h)+sideM*Math.cos(h);
+  var north=fwdM*Math.cos(h)-sideM*Math.sin(h);
+  return {lat:lat0+north/111320, lng:lng0+east/(111320*Math.cos(lat0*Math.PI/180))};
+}
+function haversineM(a,b,c,d){
+  var R=6371000,t=Math.PI/180,x=(c-a)*t,y=(d-b)*t;
+  var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*t)*Math.cos(c*t)*Math.sin(y/2)*Math.sin(y/2);
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function iou(a,b){
+  var x1=Math.max(a[0],b[0]),y1=Math.max(a[1],b[1]),x2=Math.min(a[2],b[2]),y2=Math.min(a[3],b[3]);
+  var iw=Math.max(0,x2-x1), ih=Math.max(0,y2-y1), inter=iw*ih;
+  var ua=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-inter;
+  return ua>0?inter/ua:0;
+}
+function nms(dets, thr){
+  dets=dets.slice().sort(function(a,b){return b.conf-a.conf});
+  var keep=[];
+  dets.forEach(function(d){
+    for(var i=0;i<keep.length;i++){ if(iou(keep[i].box,d.box)>thr) return; }
+    keep.push(d);
+  });
+  return keep;
+}
+// YOLOv8 detect output: [1, 4+nc, N] (channel-first, xywh in 640-px letterbox space) or the transposed [1, N, 4+nc].
+function decodeYolo(data, dims, scale, padX, padY, W, H, confThr, classFilter){
+  var a=dims[1], b=dims[2], chFirst=a<b, nCh=chFirst?a:b, N=chFirst?b:a, out=[];
+  function g(i,c){ return chFirst ? data[c*N+i] : data[i*nCh+c]; }
+  for(var i=0;i<N;i++){
+    var best=0, bc=-1;
+    for(var c=4;c<nCh;c++){ var s=g(i,c); if(s>best){best=s;bc=c-4;} }
+    if(best<confThr) continue;
+    if(classFilter!==null && classFilter!==undefined && bc!==classFilter) continue;
+    var cx=g(i,0), cy=g(i,1), w=g(i,2), h=g(i,3);
+    var x1=(cx-w/2-padX)/scale, y1=(cy-h/2-padY)/scale, x2=(cx+w/2-padX)/scale, y2=(cy+h/2-padY)/scale;
+    x1=Math.max(0,Math.min(W,x1)); x2=Math.max(0,Math.min(W,x2)); y1=Math.max(0,Math.min(H,y1)); y2=Math.max(0,Math.min(H,y2));
+    if(x2-x1<2||y2-y1<2) continue;
+    out.push({box:[x1,y1,x2,y2], conf:best, cls:bc});
+  }
+  return nms(out,0.45);
+}
+function severityFromWidth(wM){ return wM<0.30?"Low":(wM<0.60?"Medium":"High"); }
+function warrantyFor(road, nowMs){
+  if(!road) return null;
+  var d=road.completed?new Date(road.completed):null, y=Number(road.dlpYears);
+  // No completion date or warranty period on record: say so instead of guessing
+  if(!d||isNaN(d.getTime())||!isFinite(y)||y<=0||road.dlpYears===null||road.dlpYears==="") return {under:null,end:null,daysLeft:null,unknown:true};
+  var end=new Date(d.getTime()); end.setFullYear(end.getFullYear()+y);
+  var under=nowMs<=end.getTime();
+  return {under:under, end:end.toISOString().slice(0,10), daysLeft:Math.ceil((end.getTime()-nowMs)/864e5), unknown:false};
+}
+function distToPathM(lat,lng,path){
+  // shortest distance (m) from a point to a polyline of [lat,lng] points (local flat approximation)
+  if(!path||!path.length) return Infinity;
+  var kx=111320*Math.cos(lat*Math.PI/180), ky=110540, best=Infinity;
+  var pts=path.map(function(q){return [(q[1]-lng)*kx,(q[0]-lat)*ky]});
+  if(pts.length===1) return Math.hypot(pts[0][0],pts[0][1]);
+  for(var i=0;i<pts.length-1;i++){
+    var ax=pts[i][0],ay=pts[i][1],bx=pts[i+1][0],by=pts[i+1][1],dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy;
+    var t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;
+    best=Math.min(best,Math.hypot(ax+t*dx,ay+t*dy));
+  }
+  return best;
+}
+/*ENDPURE*/
+
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
+  function num(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d}
+
+  // Fixed values (these used to be settings; the defaults work for most setups)
+  var MIN_HITS=2;      // sightings needed before it is logged (the second sighting logs it, so there is almost no delay)
+  var REFINE_STEP=1.0; // after logging, the record is improved whenever a sighting is this many metres closer
+  var REFINE_MIN=3;    // ...but not once it is closer than this (m): up close the box gets cut off and distorted
+  var MAX_R=25;        // ignore anything farther than this (m)
+  var DEDUP_M=3;       // with live GPS, reports closer than this (m) are merged
+  var CDN="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
+  function confThr(){ return ({low:0.65,mid:0.5,high:0.35})[$("sens").value]||0.5; }
+
+  var video=$("video"), ov=$("ov"), ctx=ov.getContext("2d");
+  var W=1280, H=720, session=null, detecting=false, stream=null;
+  var tracks=[], nextTrack=1, flashes=[], potholes=[], gps=null, watchId=null;
+  var infMs=0, nDet=0, fpsCount=0, fpsT=performance.now();
+  var proc=document.createElement("canvas"); proc.width=proc.height=640;
+  var pctx=proc.getContext("2d",{willReadFrequently:true});
+  var inBuf=new Float32Array(3*640*640);   // reused every frame (no garbage-collection stutter)
+  var audioCtx=null;
+  // The exact video frame that is sent to the model. Photos are cut from THIS, never from the live video,
+  // because by the time a detection is logged the vehicle has already moved on and the box would be off the pothole.
+  var snap=document.createElement("canvas"), sctx=snap.getContext("2d");
+  function takeSnap(){
+    var bw=Math.min(W,1280), bh=Math.round(bw*H/W);
+    if(snap.width!==bw||snap.height!==bh){ snap.width=bw; snap.height=bh; }
+    sctx.drawImage(video,0,0,bw,bh);
+  }
+
+  // ---------- saved settings ----------
+  var SAVE_IDS=["camH","tilt","sens","fov","mhead","mlat","mlng"];
+  function saveSettings(){ try{ var o={}; SAVE_IDS.forEach(function(id){o[id]=$(id).value}); o.road=$("roadSel").value; o.guides=!!$("guides").checked; localStorage.setItem("pd_settings",JSON.stringify(o)); }catch(e){} }
+  function loadSettings(){ try{ var o=JSON.parse(localStorage.getItem("pd_settings")||"null"); if(!o) return;
+      SAVE_IDS.forEach(function(id){ if(o[id]!==undefined) $(id).value=o[id]; });
+      if(o.road){ $("roadSel").value=o.road; if(!$("roadSel").value && $("roadSel").selectedIndex!==undefined) $("roadSel").selectedIndex=0; }
+      $("guides").checked=!!o.guides; }catch(e){} }
+
+  // ---------- road / contract data ----------
+  // path = a few [lat,lng] points along the road, used to match the GPS fix to a road (Auto mode).
+  // These points are ROUGH hand-placed approximations, not surveyed. Replace them with a real trace of the road
+  // (for example exported from Google My Maps or OpenStreetMap). P6 has no path yet, so it can only be picked by hand.
+  // Contractor, length and start date come from NHAI's published project lists (status March and September 2022).
+  // completed and dlpYears are empty on purpose: no public source gives them. When you have the completion
+  // certificate date and the contract's defect liability period (for example from an RTI reply), fill them in
+  // under Advanced and the page will work out under warranty or expired by itself.
+  var ROADS=[
+    {id:"P1",path:[[30.8930,75.9400],[30.8990,75.8800],[30.9040,75.8500],[30.9100,75.8250],[30.9130,75.7950]],name:"Ludhiana Elevated Highway, NH-95 (Samrala Chowk to municipal limit)",contractor:"Gammon Engineers & Contractors – SP Singla Constructions (JV)",authority:"NHAI",completed:null,dlpYears:null,note:"EPC, 12.95 km. NHAI list start date 31 Mar 2017; first span opened 11 Sep 2023. EPC contracts had a 5-year warranty as of Oct 2024: confirm in the contract."},
+    {id:"P2",path:[[30.2110,74.9455],[30.2000,74.7500],[30.1906,74.4980]],name:"Bhatinda–Malout, NH-7",contractor:"Dineshchandra R. Agrawal Infracon Pvt Ltd",authority:"NHAI",completed:null,dlpYears:null,note:"38.67 km. NHAI list start date 27 Nov 2019."},
+    {id:"P3",path:[[30.1906,74.4980],[30.1204,74.1995],[29.9547,73.9000]],name:"Malout–Abohar–Sadhuwali, NH-7",contractor:"Ceigall India Ltd",authority:"NHAI",completed:null,dlpYears:null,note:"HAM, 64.7 km. NHAI list start date 31 Mar 2021."},
+    {id:"P4",path:[[30.1906,74.4980],[30.0700,74.6300],[29.9500,74.7370]],name:"Malout–Mandi Dabwali Package 01, NH-09",contractor:"E5 Infrastructure – Gawar Construction (JV)",authority:"NHAI",completed:null,dlpYears:null,note:"EPC, 22.5 km. NHAI list start date 24 Feb 2021."},
+    {id:"P5",path:[[31.7096,74.7973],[31.8500,74.8800],[31.9795,74.9470]],name:"Amritsar (Airport Junction)–Ramdas Package IV, NH-354",contractor:"KRC Infraprojects Pvt Ltd",authority:"NHAI",completed:null,dlpYears:null,note:"EPC, 39.2 km. Start date blank in the NHAI list."},
+    {id:"P6",name:"Delhi–Amritsar–Katra Expressway Phase-I Package VII",contractor:"Ceigall India Ltd",authority:"NHAI",completed:null,dlpYears:null,note:"EPC, 36.9 km. Start date blank in the NHAI list."}
+  ];
+  $("roadJson").value=JSON.stringify(ROADS,null,2);
+  function fillRoadSel(){
+    $("roadSel").innerHTML='<option value="auto">Auto (detect road from GPS, anywhere)</option>'+ROADS.map(function(r){return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>'}).join("");
+  }
+  fillRoadSel(); fillDemoSel();
+  $("roadJson").onchange=function(){
+    try{ var j=JSON.parse($("roadJson").value); if(!Array.isArray(j)) throw new Error("must be a list");
+      j.forEach(function(r){
+        if(!r.id||!r.name||!r.contractor) throw new Error("each road needs id, name and contractor");
+        if(r.completed && isNaN(new Date(r.completed).getTime())) throw new Error("completed must be a date like 2024-03-31 (road "+r.id+")");
+      });
+      ROADS=j; fillRoadSel(); fillDemoSel(); $("roadMsg").textContent="Loaded "+ROADS.length+" roads."; }
+    catch(e){ $("roadMsg").textContent="Invalid JSON: "+e.message+" (keeping previous data)"; }
+  };
+  loadSettings();
+  SAVE_IDS.concat(["roadSel","guides"]).forEach(function(id){ $(id).onchange=saveSettings; });
+
+  // ---------- video sources ----------
+  video.onloadedmetadata=function(){
+    W=video.videoWidth||1280; H=video.videoHeight||720; ov.width=W; ov.height=H;
+    $("stage").style.aspectRatio=W+" / "+H; $("empty").style.display="none";
+  };
+  $("camBtn").onclick=async function(){
+    try{
+      if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error("Camera needs https or http://localhost");
+      stopStream(); tracks=[];
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
+      video.removeAttribute("src"); video.loop=false; video.srcObject=stream; await video.play();
+    }catch(e){ alert("Could not start camera: "+(e&&e.message?e.message:e)); }
+  };
+  function stopStream(){ if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null;} video.srcObject=null; }
+  $("vidFile").onchange=async function(e){
+    var f=e.target.files[0]; if(!f) return;
+    stopStream(); tracks=[]; video.loop=true; video.src=URL.createObjectURL(f);
+    try{ await video.play(); }catch(err){}
+  };
+
+  // ---------- model (remembered between visits) ----------
+  function idb(){ return new Promise(function(res,rej){
+    if(typeof indexedDB==="undefined") return rej();
+    var r=indexedDB.open("pothole-detector",1);
+    r.onupgradeneeded=function(){ r.result.createObjectStore("m"); };
+    r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }); }
+  function saveModel(name,buf){ idb().then(function(db){ db.transaction("m","readwrite").objectStore("m").put({name:name,buf:buf},"model"); }).catch(function(){}); }
+  function loadSaved(){ return idb().then(function(db){ return new Promise(function(res){
+    var q=db.transaction("m").objectStore("m").get("model"); q.onsuccess=function(){res(q.result||null)}; q.onerror=function(){res(null)}; }); }).catch(function(){ return null; }); }
+  function noProxy(){ try{ return localStorage.getItem("pd_noproxy")==="1"; }catch(e){ return false; } }
+  function setStatus(t){ $("modelStatus").textContent=t; }
+
+  async function loadModel(buf,name,fromSaved){
+    try{
+      if(typeof ort==="undefined") throw new Error("onnxruntime-web did not load (check your internet connection)");
+      ort.env.wasm.wasmPaths=CDN;
+      ort.env.wasm.numThreads=Math.max(1,Math.min(4,(navigator.hardwareConcurrency||2)));
+      ort.env.wasm.proxy=!noProxy();          // run the model in a background worker so the page stays smooth
+      setStatus("Loading model…");
+      if(!fromSaved) saveModel(name,buf.slice(0));
+      session=await ort.InferenceSession.create(new Uint8Array(buf),{executionProviders:["wasm"]});
+      // warm-up run so the first real frame is not slow
+      var z={}; z[session.inputNames[0]]=new ort.Tensor("float32",new Float32Array(3*640*640),[1,3,640,640]);
+      await session.run(z);
+      $("modelStatus").innerHTML="Model ready: <b>"+esc(name)+"</b>"+(fromSaved?" (remembered)":"")+". Press <b>Start detecting</b>.";
+    }catch(e){
+      session=null;
+      if(typeof ort!=="undefined" && ort.env && ort.env.wasm && ort.env.wasm.proxy){
+        try{ localStorage.setItem("pd_noproxy","1"); }catch(x){}
+        setStatus("Could not start the model in background mode ("+(e&&e.message?e.message:e)+"). Reload this page and load the model again; it will use compatibility mode.");
+      } else setStatus("Could not load model: "+(e&&e.message?e.message:e));
+    }
+  }
+  $("modelFile").onchange=async function(e){ var f=e.target.files[0]; if(!f) return; await loadModel(await f.arrayBuffer(), f.name, false); };
+  fetch("pothole.onnx").then(function(r){return r.ok?r.arrayBuffer():Promise.reject()})
+    .then(function(b){ return loadModel(b,"pothole.onnx",false); })
+    .catch(function(){ return loadSaved().then(function(s){ if(s&&s.buf) return loadModel(s.buf,s.name,true); }); });
+
+  // ---------- GPS ----------
+  $("gpsBtn").onclick=function(){
+    if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; gps=null; $("gpsBtn").textContent="Use live GPS"; $("gpsMsg").textContent="GPS off"; return; }
+    if(!navigator.geolocation){ $("gpsMsg").textContent="Geolocation not supported"; return; }
+    $("gpsMsg").textContent="Locating…";
+    watchId=navigator.geolocation.watchPosition(function(p){
+      gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,heading:p.coords.heading,speed:p.coords.speed};
+      $("gpsBtn").textContent="Stop GPS";
+      $("gpsMsg").textContent=gps.lat.toFixed(5)+", "+gps.lng.toFixed(5)+" (±"+Math.round(gps.acc)+" m)"+(gps.speed>1&&isFinite(gps.heading)?" · "+Math.round(gps.heading)+"°":"");
+    },function(){ $("gpsMsg").textContent="GPS denied or unavailable"; watchId=null; },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+  };
+  function updateRoadHint(){
+    var el=$("roadHint"); if(!el) return;
+    if($("roadSel").value!=="auto"){ el.textContent=""; return; }
+    var loc=currentLoc();
+    if(!loc){ el.textContent="Auto needs a position: turn on GPS or enter a Manual location."; return; }
+    var r=resolveRoad(loc);
+    if(r&&!r.fromOsm){ el.textContent="Road matched from GPS: "+r.name; return; }
+    lookupOsm(loc);
+    if(r){ el.textContent="Road found on OpenStreetMap: "+r.name+". Contractor and warranty unknown (road is not in your list)."; return; }
+    el.textContent=osm.busy?"Looking up the road on OpenStreetMap…":(osm.err?"Road lookup failed ("+osm.err+"). Check the internet connection, or pick a road by hand.":"No road found at this position.");
+  }
+  function fillDemoSel(){
+    var o='<option value="">Choose a road…</option>';
+    ROADS.forEach(function(r,i){ if(r.path&&r.path.length) o+='<option value="'+i+'">'+esc(r.name)+'</option>'; });
+    $("demoRoad").innerHTML=o;
+  }
+  $("demoRoad").onchange=function(){
+    var r=ROADS[parseInt($("demoRoad").value,10)]; if(!r||!r.path||!r.path.length) return;
+    var a=r.path[0], b=r.path[1]||r.path[0];
+    $("mlat").value=a[0]; $("mlng").value=a[1];
+    var hd=(Math.atan2((b[1]-a[1])*Math.cos(a[0]*Math.PI/180),b[0]-a[0])*180/Math.PI+360)%360;
+    $("mhead").value=Math.round(hd);
+    if(watchId!==null) $("gpsBtn").onclick();   // manual position is used only when live GPS is off
+    $("roadSel").value="auto"; saveSettings(); updateRoadHint();
+  };
+  setInterval(updateRoadHint,1000);
+  function currentLoc(){
+    if(gps){ var hd=(gps.speed>1&&isFinite(gps.heading))?gps.heading:num("mhead",0); return {lat:gps.lat,lng:gps.lng,heading:hd,live:true}; }
+    var la=parseFloat($("mlat").value), lo=parseFloat($("mlng").value);
+    if(isFinite(la)&&isFinite(lo)) return {lat:la,lng:lo,heading:num("mhead",0),live:false};
+    return null;
+  }
+  var MATCH_M=3000; // a GPS fix further than this from every road's path matches no road
+  function roadDistance(r,loc){
+    if(r.path&&r.path.length) return distToPathM(loc.lat,loc.lng,r.path);
+    if(isFinite(r.lat)&&isFinite(r.lng)) return haversineM(loc.lat,loc.lng,r.lat,r.lng);
+    return Infinity;
+  }
+  // ---- worldwide fallback: ask OpenStreetMap (Nominatim) which road is under the GPS position ----
+  // Gives the road's name and number anywhere in the world. It does NOT give the contractor or warranty;
+  // no worldwide database has that, so those stay "unknown" unless the road is in the list above.
+  var osm={lat:null,lng:null,t:0,road:null,busy:false,err:""};
+  function osmRoadFromJson(j){
+    if(!j||j.error) return null;
+    var a=j.address||{}, x=j.extratags||{}, name=j.name||a.road||"", ref=x.ref||"";
+    if(!name&&!ref) return null;
+    var place=[a.suburb||a.village||a.town||a.city||a.county,a.state].filter(Boolean).join(", ");
+    return {id:"osm",name:(name||ref)+(ref&&name?" ("+ref+")":"")+(place?", "+place:""),contractor:null,
+      authority:/^(NH|AH)\b/i.test(ref)?"NHAI / highway authority":"Local road authority (not identified)",
+      completed:null,dlpYears:null,note:"Road identified from OpenStreetMap. Contractor and warranty are not known.",fromOsm:true};
+  }
+  function lookupOsm(loc){
+    if(osm.busy||!loc||!navigator.onLine) return;
+    var moved=osm.lat===null?Infinity:haversineM(loc.lat,loc.lng,osm.lat,osm.lng);
+    if(moved<40||Date.now()-osm.t<4000) return;       // be gentle with the free service (max about 1 request per 4 s)
+    osm.busy=true; osm.t=Date.now(); var at={lat:loc.lat,lng:loc.lng};
+    fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&addressdetails=1&extratags=1&lat="+at.lat+"&lon="+at.lng,{headers:{"Accept":"application/json"}})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(function(j){ osm.lat=at.lat; osm.lng=at.lng; osm.road=osmRoadFromJson(j); osm.err=""; })
+      .catch(function(e){ osm.err=String(e.message||e); })
+      .then(function(){ osm.busy=false; });
+  }
+  function osmFor(loc){ return (osm.road&&osm.lat!==null&&loc&&haversineM(loc.lat,loc.lng,osm.lat,osm.lng)<150)?osm.road:null; }
+  function resolveRoad(loc){
+    var sel=$("roadSel").value;
+    if(sel!=="auto"){ return ROADS.filter(function(r){return r.id===sel})[0]||null; }
+    if(!loc) return null;
+    var best=null,bd=MATCH_M;
+    ROADS.forEach(function(r){ var d=roadDistance(r,loc); if(d<bd){bd=d;best=r;} });
+    return best||osmFor(loc);
+  }
+
+  // ---------- detection loop ----------
+  $("runBtn").onclick=function(){
+    if(!detecting){
+      if(!session){ alert("Load your trained .onnx model first. Until then you can click on the road in the video to test the rest."); return; }
+      tracks=[];                                   // start fresh: forget potholes remembered from an earlier run
+      detecting=true; $("runBtn").textContent="Stop detecting"; detectLoop();
+    } else { detecting=false; $("runBtn").textContent="Start detecting"; }
+  };
+  async function detectLoop(){
+    while(detecting){
+      try{ await detectOnce(); }catch(e){ console.error(e); setStatus("Detection error: "+e.message); detecting=false; $("runBtn").textContent="Start detecting"; }
+      await new Promise(function(r){setTimeout(r,0)});
+    }
+  }
+  async function detectOnce(){
+    if(video.readyState<2||video.paused||video.ended){ await new Promise(function(r){setTimeout(r,50)}); return; }
+    var sc=Math.min(640/W,640/H), nw=Math.round(W*sc), nh=Math.round(H*sc), px=(640-nw)/2, py=(640-nh)/2;
+    takeSnap();                                              // freeze this frame; the model and the photo both use it
+    pctx.fillStyle="#727272"; pctx.fillRect(0,0,640,640); pctx.drawImage(snap,px,py,nw,nh);
+    var d=pctx.getImageData(0,0,640,640).data, n=640*640;
+    // In background-worker mode the model takes ownership of the input buffer, leaving it empty (length 0).
+    // So make a fresh one whenever that has happened; otherwise the same buffer is reused to avoid garbage collection.
+    if(inBuf.length!==3*n) inBuf=new Float32Array(3*n);
+    for(var i=0;i<n;i++){ inBuf[i]=d[i*4]/255; inBuf[n+i]=d[i*4+1]/255; inBuf[2*n+i]=d[i*4+2]/255; }
+    var feeds={}; feeds[session.inputNames[0]]=new ort.Tensor("float32",inBuf,[1,3,640,640]);
+    var t0=performance.now();
+    var res=await session.run(feeds);
+    var o=res[session.outputNames[0]];
+    infMs=performance.now()-t0;
+    var dets=decodeYolo(o.data,o.dims,sc,px,py,W,H,confThr(),null);
+    nDet=dets.length; updateTracks(dets);
+    fpsCount++; var now=performance.now();
+    if(now-fpsT>1000){ $("stats").textContent=(fpsCount*1000/(now-fpsT)).toFixed(1)+" detections/s · "+Math.round(infMs)+" ms each"; fpsCount=0; fpsT=now; }
+  }
+
+  // ---------- simple tracker: log each real pothole once ----------
+  function boxDiag(b){return Math.hypot(b[2]-b[0],b[3]-b[1])}
+  function ctrDist(a,b){return Math.hypot((a[0]+a[2])/2-(b[0]+b[2])/2,(a[1]+a[3])/2-(b[1]+b[3])/2)}
+  function updateTracks(dets){
+    tracks.forEach(function(t){t.matched=false});
+    dets.forEach(function(d){
+      var best=null,bs=0;
+      tracks.forEach(function(t){
+        if(t.matched) return;
+        var s=iou(t.box,d.box); if(s<0.1 && ctrDist(t.box,d.box)<0.7*boxDiag(t.box)) s=0.11;
+        if(s>bs){bs=s;best=t}
+      });
+      if(best){ best.box=d.box; best.hits++; best.confSum+=d.conf; best.misses=0; best.matched=true; best.last=d; }
+      else tracks.push({id:nextTrack++,box:d.box,dbox:d.box.slice(),hits:1,confSum:d.conf,misses:0,matched:true,logged:false,last:d});
+    });
+    var keep=[];
+    tracks.forEach(function(t){
+      if(!t.matched) t.misses++;
+      if(t.matched && t.hits>=MIN_HITS && t.confSum/t.hits>=confThr()){
+        if(!t.rec) t.rec=tryLog(t);       // log right away, on the frame it was just seen in
+        else refine(t);                   // already logged: improve it if this sighting is clearly closer
+      }
+      if(t.misses<=4) keep.push(t);
+    });
+    tracks=keep;
+  }
+  function trackPos(t){
+    var f=focalFromFov(W,num("fov",70));
+    var gp=groundPoint((t.box[0]+t.box[2])/2,t.box[3],f,W/2,H/2,num("camH",1.2),num("tilt",10),MAX_R);
+    return {gp:gp,f:f};
+  }
+  function tryLog(t){
+    var r=trackPos(t);
+    if(!r.gp||!r.gp.ok) return null;      // above the horizon or beyond the range limit: try again on the next sighting
+    return logPothole(t.box,t.confSum/t.hits,r.gp,r.f,snap);
+  }
+  // Distance estimates are rough when the pothole is far away. It is logged at once, and the record is then
+  // updated (position, size, severity, photo) whenever the same pothole is seen noticeably closer.
+  function refine(t){
+    var rec=t.rec, r=trackPos(t);
+    if(!rec||!r.gp||!r.gp.ok||r.gp.fwd<REFINE_MIN||r.gp.fwd>rec.fwd-REFINE_STEP) return;
+    updateRecord(rec,t.box,t.confSum/t.hits,r.gp,r.f,snap);
+  }
+
+  // ---------- logging, warranty, complaint ----------
+  function beep(){
+    try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      var os=audioCtx.createOscillator(); os.frequency.value=660; os.connect(audioCtx.destination); os.start(); os.stop(audioCtx.currentTime+0.08); }catch(e){}
+  }
+  // Photo of the pothole cut from a frozen frame (src), with the box drawn on it: a large copy (up to 1280 px wide)
+  // for the zoom viewer and a small thumbnail made from it for the table.
+  function makePhotos(src,box){
+    var kb=src.width/W;
+    var bc=document.createElement("canvas"); bc.width=src.width; bc.height=src.height;
+    var bx=bc.getContext("2d"); bx.drawImage(src,0,0);
+    bx.strokeStyle="#ff3b30"; bx.lineWidth=Math.max(3,src.width/300);
+    bx.strokeRect(box[0]*kb,box[1]*kb,(box[2]-box[0])*kb,(box[3]-box[1])*kb);
+    var th=document.createElement("canvas"); th.width=240; th.height=Math.round(240*H/W);
+    th.getContext("2d").drawImage(bc,0,0,th.width,th.height);
+    return {img:th.toDataURL("image/jpeg",0.7), big:bc.toDataURL("image/jpeg",0.88)};
+  }
+  function logPothole(box,conf,gp,f,src){
+    var loc=currentLoc(), geo=null;
+    if(loc) geo=toGeoM(loc.lat,loc.lng,loc.heading,gp.side,gp.fwd);
+    if(geo && loc.live){
+      for(var i=0;i<potholes.length;i++){ var p=potholes[i];
+        if(p.lat!==null && haversineM(p.lat,p.lng,geo.lat,geo.lng)<=DEDUP_M){ p.seen++; renderTable(); return p; } }
+    }
+    var wM=(box[2]-box[0])*gp.depth/f, sev=severityFromWidth(wM);
+    var road=resolveRoad(loc), w=warrantyFor(road,Date.now());
+    var ph=makePhotos(src,box);
+    var rec={id:"PH-"+Date.now().toString().slice(-6)+"-"+(potholes.length+1), time:new Date().toLocaleString("en-IN"),
+      lat:geo?geo.lat:null, lng:geo?geo.lng:null, fwd:gp.fwd, side:gp.side, widthM:wM, sev:sev, conf:conf, seen:1,
+      road:road, under:w?w.under:null, end:w?w.end:null,
+      to: !road?"Select a road":(w.under===null? road.authority+(road.contractor?" (confirm warranty with "+road.contractor+")":" (contractor unknown)") : (w.under? (road.contractor||road.authority)+" (cc: "+road.authority+")" : road.authority)),
+      img:ph.img, big:ph.big};
+    potholes.unshift(rec);
+    beep(); renderTable(); return rec;
+  }
+  function updateRecord(rec,box,conf,gp,f,src){
+    var loc=currentLoc(), geo=loc?toGeoM(loc.lat,loc.lng,loc.heading,gp.side,gp.fwd):null;
+    var ph=makePhotos(src,box);
+    rec.fwd=gp.fwd; rec.side=gp.side; rec.widthM=(box[2]-box[0])*gp.depth/f; rec.sev=severityFromWidth(rec.widthM); rec.conf=conf;
+    if(geo){ rec.lat=geo.lat; rec.lng=geo.lng; }
+    rec.img=ph.img; rec.big=ph.big;
+    renderTable(); if(lbId===rec.id) lbShow();
+  }
+  function complaintText(p){
+    return "POTHOLE COMPLAINT "+p.id+"\nDate: "+p.time+"\nRoad: "+(p.road?p.road.name:"not selected")+
+      "\nLocation: "+(p.lat!==null?p.lat.toFixed(6)+", "+p.lng.toFixed(6):"not available")+
+      "\nDistance from vehicle: "+p.fwd.toFixed(1)+" m ahead, "+Math.abs(p.side).toFixed(1)+" m "+(p.side>=0?"right":"left")+
+      "\nEstimated width: "+p.widthM.toFixed(2)+" m (severity "+p.sev+"), detection confidence "+(p.conf*100).toFixed(0)+"%"+
+      (p.road&&p.road.contractor?"\nContractor on record: "+p.road.contractor:"")+
+      "\nWarranty: "+(p.under===null?"not confirmed (completion date / defect liability period not on record)":(p.under?"Under Defect Liability Period until "+p.end:"Expired on "+p.end))+
+      "\nTo: "+p.to+
+      (p.under===null?"\nAction: Authority to find the contractor and warranty status for this road and arrange the repair accordingly.":(p.under?"\nAction: Repair within 7 days at the contractor's cost as per the Defect Liability clause.":"\nAction: Repair from the maintenance budget."))+
+      "\nNote: Automatically generated; needs human verification before a formal notice.";
+  }
+  window.copyComplaint=function(i){ try{navigator.clipboard.writeText(complaintText(potholes[i]));}catch(e){alert("Copy failed")} };
+  function renderTable(){
+    $("count").textContent=potholes.length; $("none").style.display=potholes.length?"none":"block";
+    $("rows").innerHTML=potholes.map(function(p,i){
+      var sevCls=p.sev==="High"?"t-bad":(p.sev==="Medium"?"t-mid":"t-ok");
+      var wTag=!p.road?'<span class="tag t-gray">Road not set</span>':(p.under===null?'<span class="tag t-mid">Warranty unknown</span>':(p.under?'<span class="tag t-ok">Under warranty</span>':'<span class="tag t-bad">Expired</span>'));
+      return "<tr><td><img src='"+p.img+"' alt='Pothole photo' title='Click to enlarge' onclick=\"openPhoto('"+esc(p.id)+"')\"></td>"+
+        "<td><b>"+esc(p.id)+"</b><br><span class='tag "+sevCls+"'>"+p.sev+"</span> ~"+p.widthM.toFixed(2)+" m wide<br><span class='mu'>conf "+(p.conf*100).toFixed(0)+"% · seen "+p.seen+"×</span></td>"+
+        "<td>"+p.fwd.toFixed(1)+" m ahead<br>"+Math.abs(p.side).toFixed(1)+" m "+(p.side>=0?"right":"left")+"<br><span class='mu'>"+(p.lat!==null?p.lat.toFixed(6)+", "+p.lng.toFixed(6):"no GPS / manual location")+"</span></td>"+
+        "<td>"+wTag+"<br>"+(p.road?esc(p.road.name)+"<br>":"")+"<span class='mu'>→ "+esc(p.to)+"</span><br><button class='g s' style='margin-top:4px' onclick='copyComplaint("+i+")'>Copy complaint</button></td></tr>";
+    }).join("");
+  }
+  // ---------- photo viewer: click a thumbnail to enlarge, click the photo for full size ----------
+  var lbId=null;
+  function lbIndex(){ for(var i=0;i<potholes.length;i++){ if(potholes[i].id===lbId) return i; } return -1; }
+  function lbClose(){ $("lb").hidden=true; lbId=null; }
+  function lbShow(){
+    var i=lbIndex(); if(i<0){ lbClose(); return; }
+    var p=potholes[i];
+    $("lbImg").src=p.big; $("lbImg").className="";
+    $("lbCap").textContent=p.id+" · "+p.sev+" · ~"+p.widthM.toFixed(2)+" m wide · "+p.fwd.toFixed(1)+" m ahead  ("+(i+1)+" of "+potholes.length+")";
+    $("lbDl").href=p.big; $("lbDl").download=p.id+".jpg";
+    $("lb").hidden=false;
+  }
+  function lbStep(d){ var i=lbIndex(), j=i+d; if(i<0||j<0||j>=potholes.length) return; lbId=potholes[j].id; lbShow(); }
+  window.openPhoto=function(id){ lbId=id; lbShow(); };
+  $("lbClose").onclick=lbClose;
+  $("lbPrev").onclick=function(){ lbStep(-1); };
+  $("lbNext").onclick=function(){ lbStep(1); };
+  $("lbImg").onclick=function(){ this.className=this.className?"":"full"; };
+  $("lbWrap").onclick=function(e){ if(e.target===this) lbClose(); };
+  document.onkeydown=function(e){
+    if($("lb").hidden) return;
+    if(e.key==="Escape") lbClose(); else if(e.key==="ArrowLeft") lbStep(-1); else if(e.key==="ArrowRight") lbStep(1);
+  };
+
+  $("clearBtn").onclick=function(){ if(confirm("Delete all detected potholes?")){potholes=[];tracks=[];lbClose();renderTable();} };
+  $("csvBtn").onclick=function(){
+    if(!potholes.length){alert("Nothing to download yet.");return}
+    function q(s){return '"'+String(s).replace(/"/g,'""')+'"'}
+    var head="id,time,lat,lng,forward_m,side_m,width_m,severity,confidence,seen,road,contractor,warranty,dlp_end,send_to";
+    var body=potholes.slice().reverse().map(function(p){
+      return [q(p.id),q(p.time),p.lat!==null?p.lat.toFixed(7):"",p.lng!==null?p.lng.toFixed(7):"",p.fwd.toFixed(2),p.side.toFixed(2),p.widthM.toFixed(2),p.sev,p.conf.toFixed(2),p.seen,
+        q(p.road?p.road.name:""),q(p.road&&p.road.contractor?p.road.contractor:""),p.under===null?(p.road?"unknown":""):(p.under?"under_warranty":"expired"),p.end||"",q(p.to)].join(",");
+    }).join("\n");
+    var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([head+"\n"+body],{type:"text/csv"})); a.download="potholes.csv"; a.click();
+  };
+
+  // ---------- click to simulate a pothole (tests everything except the model) ----------
+  ov.onclick=function(e){
+    if(!video.videoWidth){ return; }
+    var r=ov.getBoundingClientRect(), s=Math.min(r.width/W,r.height/H), ox=(r.width-W*s)/2, oy=(r.height-H*s)/2;
+    var u=(e.clientX-r.left-ox)/s, v=(e.clientY-r.top-oy)/s;
+    if(u<0||v<0||u>W||v>H) return;
+    var f=focalFromFov(W,num("fov",70));
+    var gp=groundPoint(u,v,f,W/2,H/2,num("camH",1.2),num("tilt",10),MAX_R);
+    if(!gp){ alert("That point is above the horizon. Click on the road."); return; }
+    if(!gp.ok){ alert("That point is "+gp.fwd.toFixed(0)+" m away, beyond the "+MAX_R+" m limit."); return; }
+    var bw=Math.max(30,W*0.05), box=[u-bw/2,v-bw*0.6,u+bw/2,v];
+    takeSnap();
+    logPothole(box,0.99,gp,f,snap);
+    flashes.push({box:box.slice(),t:performance.now()});
+  };
+
+  // ---------- drawing: clean boxes that glide between detections ----------
+  function label(b,txt,col,fs,lw){
+    var tw=ctx.measureText(txt).width+10, th=fs+6, ty=b[1]>=th?b[1]-th:b[1];
+    ctx.fillStyle=col; ctx.fillRect(b[0]-lw/2,ty,tw,th);
+    ctx.fillStyle="#10131a"; ctx.fillText(txt,b[0]+4,ty+th-5);
+  }
+  function drawGuides(fs,lw){
+    var f=focalFromFov(W,num("fov",70)), h=num("camH",1.2), th=num("tilt",10);
+    ctx.lineWidth=lw;
+    var vh=H/2-f*Math.tan(th*Math.PI/180);
+    if(vh>0&&vh<H){ ctx.strokeStyle="rgba(255,90,90,.85)"; ctx.setLineDash([12,8]); ctx.beginPath(); ctx.moveTo(0,vh); ctx.lineTo(W,vh); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle="rgba(255,90,90,.95)"; ctx.fillText("horizon",8,vh-6); }
+    [3,5,10,20].forEach(function(d){
+      var v=rowForDistance(d,f,H/2,h,th); if(!(v>0&&v<H)) return;
+      ctx.strokeStyle="rgba(64,192,87,.7)"; ctx.beginPath(); ctx.moveTo(W*0.3,v); ctx.lineTo(W*0.7,v); ctx.stroke();
+      ctx.fillStyle="rgba(64,192,87,.95)"; ctx.fillText(d+" m",W*0.7+8,v+fs/3);
+    });
+  }
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    var lw=Math.max(2,W/450), fs=Math.max(12,Math.round(W/65));
+    ctx.font="600 "+fs+"px system-ui,sans-serif";
+    if($("guides").checked) drawGuides(fs,lw);
+    ctx.lineWidth=lw+1;
+    // Only potholes that have been LOGGED are drawn (green). Raw detections are still tracked in the background
+    // but are not shown, so the video stays clean.
+    tracks.forEach(function(t){
+      if(!t.rec||t.misses>2) return;
+      var b=t.dbox; for(var i=0;i<4;i++) b[i]+=(t.box[i]-b[i])*0.4;   // glide toward the newest sighting
+      ctx.strokeStyle="#40c057"; ctx.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]);
+      label(b,"LOGGED · "+t.rec.sev,"#40c057",fs,lw);
+    });
+    // click-to-test potholes have no track, so they get a short-lived green box
+    var now=performance.now(); flashes=flashes.filter(function(x){return now-x.t<1800});
+    flashes.forEach(function(x){ ctx.strokeStyle="#40c057"; ctx.strokeRect(x.box[0],x.box[1],x.box[2]-x.box[0],x.box[3]-x.box[1]); label(x.box,"LOGGED","#40c057",fs,lw); });
+    requestAnimationFrame(render);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
