@@ -11,13 +11,17 @@ import ssl
 import sys
 from pathlib import Path
 
+# Ensure UTF-8 output on Windows consoles
+if sys.platform.startswith('win'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 PORT = 8000
 
 def get_local_ip():
     """Find the local LAN IP address of this machine."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # doesn't even have to be reachable
         s.connect(('10.255.255.255', 1))
         ip = s.getsockname()[0]
     except Exception:
@@ -44,10 +48,10 @@ def main():
     use_ssl = '--ssl' in sys.argv
 
     print("=" * 65)
-    print(" 🕳️  VERIDEX AI — LOCAL TEST SERVER (TECHFEST IIT BOMBAY)")
+    print(" [*] VERIDEX AI - LOCAL TEST SERVER (TECHFEST IIT BOMBAY)")
     print("=" * 65)
-    print(f" • Local Access:    http{'s' if use_ssl else ''}://localhost:{PORT}")
-    print(f" • Mobile Access:   http{'s' if use_ssl else ''}://{local_ip}:{PORT}")
+    print(f" -> Local Access:    http{'s' if use_ssl else ''}://localhost:{PORT}")
+    print(f" -> Mobile Access:   http{'s' if use_ssl else ''}://{local_ip}:{PORT}")
     print("-" * 65)
     print(" NOTE FOR MOBILE TESTING (PHONE CAMERA & GPS):")
     print(" Modern mobile Chrome & Safari require HTTPS to activate the camera")
