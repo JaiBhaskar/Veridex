@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VERIDEX AI — Autonomous Pothole Detection & Contractor Warranty Engine</title>
-  <meta name="description" content="Real-time edge computer vision for road defect detection, photogrammetric sizing, and automated contractor defect liability warranty enforcement. Built for Techfest IIT Bombay.">
+  <title>MARG-AI — Autonomous Pothole Detection & Contractor Warranty Engine</title>
+  <meta name="description" content="MARG-AI: Monitoring, Audit & Repair Governance AI. Real-time edge computer vision for road defect detection, photogrammetric sizing, and contractor defect liability warranty enforcement. Built for Techfest IIT Bombay.">
   <meta name="theme-color" content="#0a0d14">
 
   <!-- PWA Manifest & Icons -->
@@ -527,10 +527,10 @@
       <div class="brand-logo">🕳️</div>
       <div>
         <div class="brand-title">
-          <span>VERIDEX AI</span> Road Auditor
+          <span>MARG-AI</span> Road Auditor
           <span class="badge-iitb">IIT Bombay Techfest</span>
         </div>
-        <div class="brand-sub">Real-Time Photogrammetric Pothole Detection & Contractor Defect Liability Enforcement</div>
+        <div class="brand-sub">Monitoring, Audit &amp; Repair Governance — Real-Time Defect Liability Enforcement</div>
       </div>
     </div>
 
@@ -1755,7 +1755,7 @@
     function generateOfficialNotice(p) {
       return `=====================================================
 GOVERNMENT ROAD DEFECT & DLP REPAIR ENFORCEMENT NOTICE
-Issued via VERIDEX AI Automated Infrastructure Audit Engine
+Issued via MARG-AI Automated Infrastructure Audit Engine
 Venue: Techfest IIT Bombay 2026 Showcase
 =====================================================
 DEFECT AUDIT ID: ${p.id}
@@ -1791,7 +1791,7 @@ https://www.google.com/maps?q=${p.lat},${p.lng}
     window.dispatchWhatsApp = function(idx) {
       const p = potholes[idx];
       if (!p) return;
-      const text = encodeURIComponent(`*VERIDEX ROAD AUDIT REPORT: ${p.id}*\nRoad: ${p.road ? p.road.name : "Unassigned"}\nSeverity: ${p.sev} (~${p.widthM.toFixed(2)}m)\nContractor: ${p.contractor}\nWarranty Status: ${p.under === true ? "UNDER DLP (Contractor Liable)" : "PWD Maintenance"}\nLocation: https://www.google.com/maps?q=${p.lat},${p.lng}`);
+      const text = encodeURIComponent(`*MARG-AI ROAD AUDIT REPORT: ${p.id}*\nRoad: ${p.road ? p.road.name : "Unassigned"}\nSeverity: ${p.sev} (~${p.widthM.toFixed(2)}m)\nContractor: ${p.contractor}\nWarranty Status: ${p.under === true ? "UNDER DLP (Contractor Liable)" : "PWD Maintenance"}\nLocation: https://www.google.com/maps?q=${p.lat},${p.lng}`);
       window.open(`https://wa.me/?text=${text}`, "_blank");
     };
 
@@ -1966,7 +1966,7 @@ https://www.google.com/maps?q=${p.lat},${p.lng}
       const blob = new Blob([header + "\n" + rows.join("\n")], { type: "text/csv" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `VERIDEX_Road_Audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `MARG_AI_Road_Audit_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
     };
 
