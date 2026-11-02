@@ -517,6 +517,174 @@
       font-size: 12px;
       margin-top: 6px;
     }
+
+    /* =========================================================
+       COMPREHENSIVE MOBILE OPTIMIZATIONS (iPhone & Android)
+       ========================================================= */
+    @media (max-width: 640px) {
+      body {
+        font-size: 13px;
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+      }
+      main {
+        padding: 8px;
+        gap: 10px;
+      }
+      .card {
+        padding: 12px;
+        border-radius: 12px;
+        margin-top: 10px;
+      }
+      
+      /* Mobile App Header */
+      header {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      .brand {
+        gap: 8px;
+        min-width: 0;
+        flex: 1;
+      }
+      .brand-logo { font-size: 22px; flex-shrink: 0; }
+      .brand-title { font-size: 15px; }
+      .brand-sub {
+        font-size: 10px;
+        max-width: 195px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .pill {
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+
+      /* Video Stage & Telemetry HUD */
+      .stage {
+        border-radius: 10px;
+        max-height: 44vh;
+      }
+      .hud-bar {
+        top: 6px;
+        left: 6px;
+        right: 6px;
+        gap: 4px;
+      }
+      .hud-chip {
+        padding: 3px 6px;
+        font-size: 9.5px;
+        border-radius: 4px;
+        gap: 4px;
+      }
+
+      /* Mobile Controls Grid (Thumb-Friendly) */
+      .btn-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      #runBtn {
+        grid-column: 1 / -1; /* Big bold primary detection button across the top */
+        min-height: 48px;
+        font-size: 15px;
+        font-weight: 700;
+        border-radius: 10px;
+      }
+      button, label.btn {
+        min-height: 42px;
+        font-size: 12px;
+        padding: 8px;
+        border-radius: 8px;
+        justify-content: center;
+        text-align: center;
+      }
+      #flipCamBtn {
+        grid-column: span 1;
+      }
+
+      /* KPI Cards 2x2 Grid */
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .kpi {
+        padding: 8px 6px;
+        border-radius: 8px;
+      }
+      .kpi-val { font-size: 18px; }
+      .kpi-label { font-size: 9.5px; }
+
+      /* Pan-India Intelligence on Mobile */
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      #liveRoadCard > div:nth-child(2) {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
+
+      /* Leaflet Map */
+      #mapContainer {
+        height: 220px;
+        border-radius: 8px;
+      }
+
+      /* Mobile Card View for Audit Log (No annoying horizontal scroll) */
+      .table-scroll {
+        max-height: 480px;
+        border: none;
+        background: transparent;
+      }
+      table, tbody, tr, td {
+        display: block;
+        width: 100%;
+      }
+      thead {
+        display: none;
+      }
+      tr {
+        background: var(--card-alt);
+        border: 1px solid var(--bd);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        padding: 12px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      }
+      td {
+        padding: 4px 0;
+        border: none;
+        background: transparent;
+      }
+      td:first-child {
+        margin-bottom: 8px;
+      }
+      td img {
+        width: 100%;
+        height: 150px;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+      td:last-child {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--bd);
+      }
+      td:last-child div {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      td:last-child button {
+        width: 100%;
+        min-height: 38px;
+        font-size: 12px;
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
