@@ -1,8 +1,6 @@
 """
-MARG-AI — Streamlit Dashboard Edition
-Monitoring, Audit & Repair Governance AI
+Veridex — Streamlit Dashboard Edition
 Autonomous Pothole Detection & Contractor Defect Liability Warranty Auditor
-Prepared for Techfest IIT Bombay 2026
 """
 
 import sys
@@ -25,7 +23,7 @@ import onnxruntime as ort
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="MARG-AI — IIT Bombay Techfest",
+    page_title="Veridex — Road Auditor",
     page_icon="🕳️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -114,8 +112,8 @@ col_logo, col_header = st.columns([1, 8])
 with col_logo:
     st.markdown("<h1 style='font-size: 55px; margin: 0;'>🕳️</h1>", unsafe_allow_html=True)
 with col_header:
-    st.markdown("## MARG-AI — Road Audit & DLP Warranty Enforcement")
-    st.markdown("<span class='badge-iitb'>Techfest IIT Bombay 2026 Showcase</span> &nbsp; Monitoring, Audit & Repair Governance AI", unsafe_allow_html=True)
+    st.markdown("## Veridex — Road Audit & DLP Warranty Enforcement")
+    st.markdown("Autonomous Real-Time Defect Detection & Contractor Liability Verification", unsafe_allow_html=True)
 
 st.write("---")
 

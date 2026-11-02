@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MARG-AI — Autonomous Pothole Detection & Contractor Warranty Engine</title>
-  <meta name="description" content="MARG-AI: Monitoring, Audit & Repair Governance AI. Real-time edge computer vision for road defect detection, photogrammetric sizing, and contractor defect liability warranty enforcement. Built for Techfest IIT Bombay.">
+  <title>Veridex — Autonomous Road Defect Detection & Contractor Warranty Engine</title>
+  <meta name="description" content="Veridex: Real-time edge computer vision for road defect detection, photogrammetric sizing, and contractor defect liability warranty enforcement.">
   <meta name="theme-color" content="#0a0d14">
 
   <!-- PWA Manifest & Icons -->
@@ -527,10 +527,9 @@
       <div class="brand-logo">🕳️</div>
       <div>
         <div class="brand-title">
-          <span>MARG-AI</span> Road Auditor
-          <span class="badge-iitb">IIT Bombay Techfest</span>
+          <span>Veridex</span> Road Auditor
         </div>
-        <div class="brand-sub">Monitoring, Audit &amp; Repair Governance — Real-Time Defect Liability Enforcement</div>
+        <div class="brand-sub">Real-Time Road Defect Detection &amp; Contractor Warranty Enforcement</div>
       </div>
     </div>
 
@@ -538,15 +537,7 @@
     <div class="pills">
       <div class="pill" id="pillGps">
         <span class="pill-dot"></span>
-        <span id="pillGpsText">GPS Offline</span>
-      </div>
-      <div class="pill" id="pillModel">
-        <span class="pill-dot"></span>
-        <span id="pillModelText">Model Initializing...</span>
-      </div>
-      <div class="pill" id="pillFps">
-        <span class="pill-dot"></span>
-        <span id="pillFpsText">0 FPS</span>
+        <span id="pillGpsText">GPS Off</span>
       </div>
     </div>
   </header>
@@ -1277,7 +1268,7 @@
 
       $("gpsStatusText").textContent = "Acquiring GPS fix (satellite lock)...";
       $("pillGps").className = "pill warn";
-      $("pillGpsText").textContent = "Locating...";
+      $("pillGpsText").textContent = "GPS Off";
 
       // Step 1: Quick coarse fix
       navigator.geolocation.getCurrentPosition(
@@ -1309,7 +1300,7 @@
       $("gpsStatusText").textContent = `${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${Math.round(gps.acc)} m) · ${spdKmh} km/h`;
       
       $("pillGps").className = "pill active";
-      $("pillGpsText").textContent = `GPS Fix (±${Math.round(gps.acc)}m)`;
+      $("pillGpsText").textContent = "GPS On";
 
       updateCarMarker(gps.lat, gps.lng, gps.heading || num("mhead", 0));
       updateRoadHint();
@@ -1320,7 +1311,7 @@
       if (err.code === 1) {
         $("gpsStatusText").textContent = "GPS permission denied. Please allow location in browser.";
         $("pillGps").className = "pill";
-        $("pillGpsText").textContent = "GPS Denied";
+        $("pillGpsText").textContent = "GPS Off";
       } else if (err.code === 3) {
         $("gpsStatusText").textContent = "GPS weak signal indoors. Retrying with network location...";
         navigator.geolocation.getCurrentPosition(onGpsSuccess, null, { enableHighAccuracy: false, timeout: 15000 });
@@ -1448,13 +1439,17 @@
 
         if (!fromSaved) saveModelToCache(name, buf.slice(0), MODEL_VER);
 
-        $("pillModel").className = "pill active";
-        $("pillModelText").textContent = "AI Ready";
+        if ($("pillModel")) {
+          $("pillModel").className = "pill active";
+          $("pillModelText").textContent = "AI Ready";
+        }
         $("modelStatus").innerHTML = `Model ready: <b>${esc(name)}</b>${fromSaved ? " (Cached offline)" : ""}. Press <b>Start Detecting</b>.`;
       } catch (err) {
         session = null;
-        $("pillModel").className = "pill";
-        $("pillModelText").textContent = "Model Error";
+        if ($("pillModel")) {
+          $("pillModel").className = "pill";
+          $("pillModelText").textContent = "Model Error";
+        }
         $("modelStatus").textContent = `Error loading model: ${err.message}`;
       }
     }
@@ -1608,7 +1603,7 @@
       const now = performance.now();
       if (now - fpsTimer >= 1000) {
         const fps = (fpsCount * 1000 / (now - fpsTimer)).toFixed(1);
-        $("pillFpsText").textContent = `${fps} FPS`;
+        if ($("pillFpsText")) $("pillFpsText").textContent = `${fps} FPS`;
         fpsCount = 0;
         fpsTimer = now;
       }
