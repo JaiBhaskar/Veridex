@@ -30,6 +30,20 @@ def get_local_ip():
         s.close()
     return ip
 
+class DualStackServer(http.server.ThreadingHTTPServer):
+    """Multi-threaded HTTP server that handles simultaneous requests and supports both IPv4 and IPv6."""
+    daemon_threads = True
+
+    def server_bind(self):
+        if getattr(self, "address_family", None) == socket.AF_INET6:
+            try:
+                # Enable dual-stack: accepts both IPv4 and IPv6 connections on the same port
+                self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+            except Exception:
+                pass
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        super().server_bind()
+
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         # Allow cross-origin resources, maps, and CDNs
@@ -48,10 +62,11 @@ def main():
     use_ssl = '--ssl' in sys.argv
 
     print("=" * 65)
-    print(" [*] VERIDEX AI - LOCAL TEST SERVER (TECHFEST IIT BOMBAY)")
+    print(" [*] VERIDEX AI - MULTI-THREADED TEST SERVER")
     print("=" * 65)
-    print(f" -> Local Access:    http{'s' if use_ssl else ''}://localhost:{PORT}")
-    print(f" -> Mobile Access:   http{'s' if use_ssl else ''}://{local_ip}:{PORT}")
+    print(f" -> Localhost (IPv4):   http{'s' if use_ssl else ''}://127.0.0.1:{PORT}")
+    print(f" -> Localhost (Name):   http{'s' if use_ssl else ''}://localhost:{PORT}")
+    print(f" -> Mobile LAN Access:  http{'s' if use_ssl else ''}://{local_ip}:{PORT}")
     print("-" * 65)
     print(" NOTE FOR MOBILE TESTING (PHONE CAMERA & GPS):")
     print(" Modern mobile Chrome & Safari require HTTPS to activate the camera")
@@ -59,7 +74,15 @@ def main():
     print("   npx vercel --prod")
     print("=" * 65)
 
-    with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
+    # Attempt dual-stack IPv6 (covers both IPv6 ::1 and IPv4 127.0.0.1 / 0.0.0.0)
+    try:
+        DualStackServer.address_family = socket.AF_INET6
+        httpd = DualStackServer(("::", PORT), CustomHandler)
+    except Exception:
+        DualStackServer.address_family = socket.AF_INET
+        httpd = DualStackServer(("0.0.0.0", PORT), CustomHandler)
+
+    with httpd:
         if use_ssl:
             cert_file = Path("cert.pem")
             key_file = Path("key.pem")
