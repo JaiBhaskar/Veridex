@@ -1089,12 +1089,11 @@
       const defaultPos = [30.7544, 76.6107]; // Active default (Punjab Corridor)
       map = L.map("mapContainer", { zoomControl: false }).setView(defaultPos, 14);
 
-      // Fast, reliable CartoDB Voyager tiles (100% uptime, zero rate-limit or CORS blocking)
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      // Free, high-performance Esri World Street Map (100% Free, NO API Key needed, covers all Indian roads)
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 19,
-        subdomains: "abcd",
         crossOrigin: true,
-        attribution: '&copy; CartoDB &copy; OpenStreetMap'
+        attribution: '&copy; Esri &mdash; StreetMap India'
       }).addTo(map);
 
       L.control.zoom({ position: "topright" }).addTo(map);
