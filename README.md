@@ -1,176 +1,182 @@
-# 🕳️ VERIDEX AI — Autonomous Road Health & Contractor Warranty Engine
-### *Edge Computer Vision, Photogrammetric 3D Sizing & Legal Defect Liability Period (DLP) Enforcement*
-**Official Submission for Techfest — IIT Bombay**
+# 🕳️ VERIDEX — Real-Time Road Defect Detection & Contractor Warranty Enforcement
 
-[![Deployment: Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
-[![Framework: ONNX Runtime Web](https://img.shields.io/badge/Engine-ONNX_Runtime_Web-0078D4?logo=microsoft)](https://onnxruntime.ai)
-[![Architecture: YOLOv8](https://img.shields.io/badge/Vision-YOLOv8-FF5722)](https://github.com/ultralytics/ultralytics)
-[![Venue: IIT Bombay](https://img.shields.io/badge/Venue-IIT_Bombay_Techfest-7C3AED)](#)
+> Autonomous edge computer vision, photogrammetric 3D pothole measurement, and legal Defect Liability Period (DLP) warranty enforcement for Indian roads and highways.
 
----
-
-## 📌 Executive Summary
-
-India loses thousands of lives and crores of rupees annually due to road craters and potholes. While multiple projects perform raw computer vision detection, **none solve the accountability problem**:
-> *"Who is legally responsible for repairing this pothole, and who pays for it?"*
-
-Under Indian road construction norms (**NHAI, MoRTH, State PWD, and BMC/MCGM EPC/HAM guidelines**), every new road has a mandatory **Defect Liability Period (DLP / Warranty)** ranging from **3 to 5 years**. During this period, the **private contractor is legally bound to repair any pothole within 48 to 72 hours at zero cost to the public exchequer**. If the warranty has expired, the defect is routed to the municipal maintenance budget.
-
-**VERIDEX AI** runs real-time edge computer vision on a smartphone or dashcam, calculates the exact metric dimensions (in centimeters/meters) and 3D road coordinates using flat-road photogrammetry, cross-references live GPS against government road contracts, and automatically generates legal defect liability claim notices with high-resolution photo evidence.
+[![Live Web App](https://img.shields.io/badge/Live_App-veridex--omega.vercel.app-000?style=for-the-badge&logo=vercel)](https://veridex-omega.vercel.app)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-JaiBhaskar%2FVeridex-181717?style=for-the-badge&logo=github)](https://github.com/JaiBhaskar/Veridex)
+[![AI Engine](https://img.shields.io/badge/Model-YOLOv8_ONNX_Web-FF5722?style=for-the-badge)](https://onnxruntime.ai)
 
 ---
 
-## 🚀 Live Demo & Quick Deployment
+## 📌 Project Overview
 
-### Option 1: 1-Click Deployment to Vercel (Recommended for Phone & Judges)
-Deploying to Vercel provides a permanent **HTTPS URL with SSL**, which is **strictly required by Android Chrome and iOS Safari to enable phone camera and GPS sensors**.
+In India, road craters and potholes cause thousands of fatal accidents and millions of rupees in vehicular damage every year. While raw computer vision detection exists, traditional systems fail to solve the accountability bottleneck:
+> **"Who constructed this road, who is legally obligated to repair it, and who bears the financial liability?"**
 
-1. Push this folder to your GitHub:
+Under Indian infrastructure standards (**NHAI, MoRTH, State PWD, and Smart City Mission EPC/HAM contracts**), newly constructed and resurfaced roads carry a mandatory **Defect Liability Period (DLP / Warranty)** typically lasting **3 to 5 years**. During active DLP:
+1. The **contractor is legally required** to repair any road defect within **48–72 hours** at zero expense to the public.
+2. If the DLP warranty has expired, financial responsibility shifts to the government municipal/PWD maintenance budget.
+
+**VERIDEX** solves this end-to-end. Running entirely on edge devices (smartphones, dashcams, or tablets) with **zero cloud inference costs**, it detects road defects in real time, computes their real-world metric dimensions (centimeters and meters) via flat-road photogrammetry, resolves the governing authority and contractor in real time across India, and issues legal DLP warranty notices with clickable GPS links.
+
+---
+
+## ⚙️ Technical Architecture
+
+```
+[ Video Feed (Camera / Dashcam) ]
+               │
+               ▼
+   [ Letterbox Pre-processing (640x640) ]
+               │
+               ▼
+   [ Edge Neural Network: YOLOv8 ]  ◄── ONNX Runtime Web (WASM SIMD)
+               │
+               ▼
+   [ Bounding Box & Class Decoding ]
+               │
+               ▼
+   [ Multi-Frame Spatial Tracker ]
+               │
+      ┌────────┴──────────────────────────┐
+      ▼                                   ▼
+[ Photogrammetric 3D Sizing ]     [ Pan-India Geocoding & Jurisdiction ]
+- Metric Width (cm)               - OpenStreetMap Nominatim API
+- Forward Distance (m)            - NHAI / State PWD / Urban ULB
+- Lateral Lane Offset (m)         - DLP Clause & Contractor Match
+      │                                   │
+      └────────┬──────────────────────────┘
+               ▼
+   [ Real-Time Executive HUD & Audit Pipeline ]
+   - Neon ADAS Bounding Boxes
+   - Esri World Street Map Defect Pin
+   - Financial Repair Liability Calculator (₹)
+   - Official Legal Notice Generator
+   - UTF-8 Executive CSV Audit Exporter
+```
+
+### 1. Neural Network Inference Engine
+* **Model Architecture:** YOLOv8 edge detector (`pothole.onnx`, 13.2 MB).
+* **Runtime:** ONNX Runtime Web 1.18 running locally inside the browser via WebAssembly (WASM).
+* **Input Resolution:** `[1, 3, 640, 640]` normalized RGB.
+* **Latency:** ~25–35 ms per frame on standard smartphone hardware (30+ FPS).
+* **Data Privacy:** 100% on-device processing. No video frames are ever transmitted to third-party servers.
+
+### 2. Monocular Photogrammetry Formulation
+VERIDEX computes metric dimensions directly from single-camera 2D pixels without requiring expensive LiDAR sensors:
+
+* **Camera Focal Length from Field of View:**
+  $$f = \frac{W / 2}{\tan\left(\frac{\theta_{\text{FOV}}}{2}\right)}$$
+
+* **Ground-Plane Ray Intersection:**
+  For bounding box bottom-center $(u, v)$ with image optical center $(c_x, c_y) = (W/2, H/2)$:
+  $$y_{\text{norm}} = \frac{v - c_y}{f}, \quad x_{\text{norm}} = \frac{u - c_x}{f}$$
+  $$\text{Denominator} = \sin(\theta_{\text{pitch}}) + y_{\text{norm}} \cos(\theta_{\text{pitch}})$$
+  $$\text{Optical Depth } t = \frac{h_{\text{mount}}}{\text{Denominator}}$$
+  $$\text{Forward Distance } d = t \cdot \left(\cos(\theta_{\text{pitch}}) - y_{\text{norm}} \sin(\theta_{\text{pitch}})\right)$$
+  $$\text{Lateral Offset } x = t \cdot x_{\text{norm}}$$
+
+* **Metric Defect Width:**
+  $$w_{\text{metric}} = \frac{(x_2 - x_1) \cdot t}{f} \quad (\text{meters})$$
+
+* **Defect Severity Classification:**
+  * **Low:** Width $< 30\text{ cm}$ (Routine Patching: ₹1,500)
+  * **Medium:** $30\text{ cm} \le \text{Width} \le 60\text{ cm}$ (Bituminous Filling: ₹4,500)
+  * **High:** Width $> 60\text{ cm}$ (Hazardous Crater Reconstruction: ₹9,500)
+
+### 3. Pan-India Jurisdiction Intelligence
+* **Live Geocoding:** Reverse-geocodes GPS coordinates live using OpenStreetMap Nominatim.
+* **Corridor Identification:** Resolves National Highways (`NH-XX`), State Highways (`SH-XX`), Expressways, and Municipal streets.
+* **Warranty Classification:** Automatically applies 5-year EPC DLP clauses for NHAI highways, 3-year PWD clauses for state roads, and 2-year maintenance clauses for urban roads.
+
+---
+
+## 🚀 How to Run the Project
+
+### Option 1: Live Cloud Application (Zero Setup)
+Open the deployed production URL on any phone, tablet, or laptop:
+👉 **[https://veridex-omega.vercel.app](https://veridex-omega.vercel.app)**
+
+*Mobile Note:* Open on your smartphone browser (Chrome / Safari) to test with your phone's live rear/front camera and GPS.
+
+---
+
+### Option 2: Local Web Server (Development)
+Run the multi-threaded dual-stack local server:
+
+1. Clone the repository:
    ```bash
-   git init
-   git add .
-   git commit -m "VERIDEX IIT Bombay Release"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/veridex-pothole.git
-   git push -u origin main
+   git clone https://github.com/JaiBhaskar/Veridex.git
+   cd Veridex
    ```
-2. Go to [vercel.com](https://vercel.com), click **Add New Project**, import your repository, and click **Deploy**.
-3. **Done!** Open `https://your-project.vercel.app` on your phone. Camera, GPS, and ONNX AI inference will run instantly!
+2. Start the local server:
+   ```bash
+   python serve.py
+   ```
+3. Open your browser:
+   * **Local Access:** `http://localhost:8000`
+   * **Local IP:** `http://127.0.0.1:8000`
 
-*Alternatively, using Vercel CLI from this directory:*
+---
+
+### Option 3: Streamlit Companion Analytics Dashboard
+For desktop data analytics and batch video processing:
+
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Launch Streamlit:
+   ```bash
+   python -m streamlit run app.py
+   ```
+
+---
+
+### Option 4: Deploying to Vercel (Production)
+To deploy your own instance to Vercel in 1 command:
 ```bash
-npx vercel --prod
+npx vercel --prod --yes
 ```
 
 ---
 
-### Option 2: Local Testing on Laptop & Phone (Wi-Fi)
-To test locally across devices on the same Wi-Fi network:
-```bash
-python serve.py
-```
-This starts an optimized server on `http://localhost:8000` and displays your local IP (e.g. `http://192.168.1.x:8000`).
+## 📱 How to Use the Application
 
-> ⚠️ **Important Phone Note:**
-> Modern mobile browsers (iOS Safari & Android Chrome) disable `getUserMedia` (camera) and `geolocation` over insecure HTTP (`http://192.168.x.x`).  
-> **Solution:** Use the deployed Vercel HTTPS link, or run with self-signed SSL: `python serve.py --ssl`.
-
----
-
-### Option 3: Streamlit Python Dashboard
-For desktop presentation or cloud analytics:
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
----
-
-## 🛠️ Root-Cause Analysis: Why Phone Camera & GPS Failed (And How We Fixed It)
-
-| Issue | Root Cause | Solution Implemented in VERIDEX |
-| :--- | :--- | :--- |
-| **Phone Camera Not Opening** | Mobile browsers block `navigator.mediaDevices` on non-HTTPS origins (except localhost). Additionally, hardcoded landscape resolutions (`1280x720`) throw `OverconstrainedError` on mobile portrait sensors. | Added progressive fallback constraints (`facingMode: "environment"` ➔ `user` ➔ `true`), iOS Safari inline playback attributes (`playsinline`, `webkit-playsinline`, `muted`), camera flip button, and Vercel HTTPS configuration. |
-| **GPS Unavailable / Failing** | `watchPosition` with strict `timeout: 20000` times out indoors. The old code immediately killed the watch and displayed "GPS denied". | Implemented a two-stage GPS pipeline: quick coarse network fix ➔ continuous high-accuracy tracking. Added timeout auto-retry, indoor manual preset selector, and Leaflet map tap-to-locate. |
-| **Model Incompatibility** | YOLOv8-seg models output 37 channels (`[1, 37, 8400]`). The old decoder read mask prototype rows 5–36 as class scores, corrupting detections. | Fixed decoder to separate bounding box (rows 0–3), class confidence (row 4), and mask coefficients (rows 5–36). |
-
----
-
-## 📐 Mathematical Formulation: Photogrammetric 3D Sizing
-
-VERIDEX does not guess pothole sizes—it computes them geometrically using single-camera monocular ground projection.
-
-```
-                  Optical Axis
-Camera (h) •-------------------------- Horizon
-            \ θ (Tilt Down)
-             \
-              \ Ray to Pothole Ground Contact
-               \
-================•============================== Flat Road
-                |<-------- d (forward) ------->|
-```
-
-### 1. Focal Length from Field of View (FOV):
-$$f = \frac{W / 2}{\tan\left(\frac{\theta_{\text{FOV}}}{2}\right)}$$
-
-### 2. Ray Intersection with Flat Road:
-For a bounding box bottom-center point $(u, v)$ with optical center $(c_x, c_y) = (W/2, H/2)$:
-$$y_{\text{norm}} = \frac{v - c_y}{f}, \quad x_{\text{norm}} = \frac{u - c_x}{f}$$
-$$\text{Denominator} = \sin(\theta) + y_{\text{norm}} \cos(\theta)$$
-$$\text{Optical Depth } t = \frac{h}{\text{Denominator}}$$
-$$\text{Forward Distance } d = t \cdot \left(\cos(\theta) - y_{\text{norm}} \sin(\theta)\right)$$
-$$\text{Lateral Offset } x = t \cdot x_{\text{norm}}$$
-
-### 3. Metric Pothole Width:
-Using the bounding box pixel width $w_{\text{px}} = x_2 - x_1$:
-$$w_{\text{metric}} = \frac{w_{\text{px}} \cdot t}{f} \quad (\text{meters})$$
-
-- **Low Severity:** $w_{\text{metric}} < 30\text{ cm}$
-- **Medium Severity:** $30\text{ cm} \le w_{\text{metric}} \le 60\text{ cm}$
-- **High / Severe:** $w_{\text{metric}} > 60\text{ cm}$ (Hazardous Crater)
-
----
-
-## 🏛️ Preloaded Road Contracts (Techfest IIT Bombay & National Highways)
-
-| Road ID | Corridor Name | Jurisdiction | Contractor | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **IITB-01** | Adi Shankaracharya Marg / JVLR (Powai) | BMC / MMRDA | Larsen & Toubro (L&T) | 🟢 Under DLP Warranty (3 Years) |
-| **MUM-01** | Western Express Highway (WEH) / NH-48 | Maharashtra PWD | IRB Infrastructure | 🟢 Under DLP Warranty (5 Years) |
-| **MUM-02** | Eastern Express Highway (EEH) | BMC / MCGM | HCC – Shapoorji Pallonji | 🔴 Warranty Expired (Routine PWD) |
-| **NHAI-95** | Ludhiana Elevated Highway, NH-95 | NHAI | Gammon – SP Singla (JV) | 🟢 Under DLP Warranty (5 Years) |
-| **NHAI-07** | Bhatinda–Malout Corridor, NH-7 | NHAI | Dineshchandra R. Agrawal | 🟢 Under DLP Warranty (4 Years) |
-
-*Global fallback: If the vehicle enters any unlisted road in the world, the built-in OpenStreetMap Nominatim reverse-geocoder resolves the road name and authority in real-time.*
-
----
-
-## 🎤 3-Minute Presentation Pitch for Techfest IIT Bombay Judges
-
-1. **The Hook (30s):**
-   > *"Good morning, respected judges. In India, potholes cause thousands of accidents every monsoon. But when citizens complain, municipalities and contractors engage in blame games. Why? Because the public does not know who holds the road contract and whether it is under warranty."*
-
-2. **The Innovation (60s):**
-   > *"We present **VERIDEX AI**. It runs 100% on the edge in any mobile browser or dashcam. Using a custom YOLOv8 model running via WebAssembly SIMD and flat-road photogrammetry, it measures the exact metric width of potholes in centimeters and computes their 3D distance without expensive LiDAR."*
-
-3. **The Impact & Legal Engine (60s):**
-   > *"Every road in India is legally covered by a Defect Liability Period (DLP). VERIDEX cross-references GPS with the government contract database. If a pothole is found on JVLR right outside IIT Bombay, it immediately flags the contractor—in this case, L&T—who is legally bound under IRC guidelines to repair it within 72 hours for free. We can export an audit report or dispatch an official legal notice with one click."*
-
-4. **Live Demo (30s):**
-   > *"Watch this live demonstration: here is our dashboard tracking dashcam video, rendering real-time bounding boxes, plotting pins on Leaflet OSM, and classifying DLP liability."*
+1. **Start the Feed:**
+   * **On Phone / Car Mount:** Tap **`📷 Use Camera`** (switch between front and rear cameras using **`🔄 Flip Camera`**).
+   * **For Demo / Testing:** Tap **`🚗 Play Sample Video`** to run the pre-loaded 1080p highway test video.
+2. **Begin Detection:**
+   * Tap **`▶ Start Detecting`**.
+   * The AI will render real-time neon bounding boxes, confidence tags, and metric width estimates over potholes.
+3. **Inspect the Map:**
+   * View defect locations plotted in real time on the **Esri World Street Map**.
+   * Click any marker to view the pothole ID, width, road authority, and contractor liability.
+4. **Indoor Demo Mode (Judges & Presentations):**
+   * Tap **`⚡ Test Pothole`** to simulate an immediate defect detection on demand.
+   * Demonstrates the audio alert beep, map pin drop, liability claim calculation, and legal notice generation without needing live road driving.
+5. **Export & Legal Enforcement:**
+   * Tap **`📋 Copy Notice`** to copy a formal legal Defect Liability repair enforcement notice.
+   * Tap **`📥 Export CSV`** to download a clean, Excel-ready audit report (`.csv`) with UTF-8 encoding, exact GPS links, and total claim costs in ₹ INR.
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-├── index.html              # Main Production Web Application (Mobile HUD, ONNX Web, Leaflet Map)
-├── pothole.onnx            # Pre-trained YOLOv8 Pothole Detection Model (12.67 MB)
-├── sample-road-video.mp4   # Pre-loaded dashcam test video (for instant indoor demo)
-├── serve.py                # Local development & mobile testing server (with SSL & WASM headers)
-├── app.py                  # Streamlit companion cloud dashboard
-├── vercel.json             # Vercel deployment configuration (SIMD multi-threading headers)
-├── manifest.json           # Progressive Web App (PWA) manifest for home screen install
-├── requirements.txt        # Python dependencies for Streamlit
-├── package.json            # NPM project metadata
-├── train_pothole_yolo.py   # Training script for Ultralytics YOLOv8
-└── colab_cells.py          # Google Colab GPU notebook cells
+├── index.html              # Main Production Edge Web App (ONNX Runtime Web, Esri Leaflet Map, Mobile HUD)
+├── pothole.onnx            # Trained YOLOv8 Edge Vision Model (13.28 MB)
+├── sample-road-video.mp4   # 1080p Real-World Road Test Footage
+├── serve.py                # Multi-Threaded Dual-Stack Local Test Server (IPv4 + IPv6)
+├── app.py                  # Streamlit Companion Analytics Dashboard
+├── vercel.json             # Vercel Production Static Edge Configuration
+├── .vercelignore           # Vercel Deployment Optimization Rules
+├── manifest.json           # Progressive Web App (PWA) Manifest
+├── requirements.txt        # Python Dependencies (Streamlit, ONNX Runtime, OpenCV)
+└── package.json            # Node.js Project Metadata
 ```
 
 ---
 
-## 🏆 Techfest IIT Bombay Verification Checklist
-
-- [x] Model downloads and initializes automatically in browser (`pothole.onnx`).
-- [x] Real-time inference running at 30+ FPS using ONNX Runtime Web.
-- [x] Photogrammetric depth and width calculations calibrated with visual distance grid.
-- [x] Camera access working on Android and iOS Safari.
-- [x] GPS tracking with indoor manual venue fallback for IIT Bombay.
-- [x] Interactive Leaflet map with color-coded severity defect pins.
-- [x] DLP warranty evaluation and automated legal notice generator.
-- [x] 1-Click sample video button for indoor booth demonstrations.
-- [x] 1-Click Vercel deployment ready.
-
----
-**VERIDEX AI** — *Empowering Citizen Audits & Transparent Road Infrastructure.*
+## 📄 License
+This project is developed for academic presentation, hackathons, and civic infrastructure monitoring. All rights reserved.
