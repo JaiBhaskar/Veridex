@@ -32,9 +32,9 @@ def get_local_ip():
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
-        # Enable multi-threaded WebAssembly & SharedArrayBuffer
+        # Allow cross-origin resources, maps, and CDNs
         self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
-        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
+        self.send_header('Cross-Origin-Embedder-Policy', 'credentialless')
         self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 

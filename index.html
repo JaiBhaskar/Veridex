@@ -1093,6 +1093,7 @@
       L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
         maxZoom: 19,
         subdomains: "abcd",
+        crossOrigin: true,
         attribution: '&copy; CartoDB &copy; OpenStreetMap'
       }).addTo(map);
 
