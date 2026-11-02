@@ -1544,12 +1544,19 @@
     async function loadModel(buf, name, fromSaved) {
       try {
         if (typeof ort === "undefined") throw new Error("ONNX Runtime Web library did not load.");
+        const canThread = (typeof SharedArrayBuffer !== "undefined" && window.crossOriginIsolated);
         ort.env.wasm.wasmPaths = CDN_ORT;
-        ort.env.wasm.numThreads = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2)));
-        ort.env.wasm.proxy = false; // direct thread execution
+        ort.env.wasm.numThreads = canThread ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2))) : 1;
+        ort.env.wasm.proxy = false;
 
         $("modelStatus").textContent = "Initializing neural network weights...";
-        session = await ort.InferenceSession.create(new Uint8Array(buf), { executionProviders: ["wasm"] });
+        try {
+          session = await ort.InferenceSession.create(new Uint8Array(buf), { executionProviders: ["wasm"] });
+        } catch (wasmErr) {
+          console.warn("Retrying with safe single-thread wasm execution:", wasmErr);
+          ort.env.wasm.numThreads = 1;
+          session = await ort.InferenceSession.create(new Uint8Array(buf), { executionProviders: ["wasm"] });
+        }
 
         // Warm-up inference
         const warmup = {};
@@ -1558,18 +1565,12 @@
 
         if (!fromSaved) saveModelToCache(name, buf.slice(0), MODEL_VER);
 
-        if ($("pillModel")) {
-          $("pillModel").className = "pill active";
-          $("pillModelText").textContent = "AI Ready";
-        }
-        $("modelStatus").innerHTML = `Model ready: <b>${esc(name)}</b>${fromSaved ? " (Cached offline)" : ""}. Press <b>Start Detecting</b>.`;
+        $("modelBar").hidden = true;
+        $("modelStatus").innerHTML = `AI Model Active: <b>${esc(name)}</b>${fromSaved ? " (Offline Cached)" : ""}. Ready for real-time detection.`;
       } catch (err) {
         session = null;
-        if ($("pillModel")) {
-          $("pillModel").className = "pill";
-          $("pillModelText").textContent = "Model Error";
-        }
-        $("modelStatus").textContent = `Error loading model: ${err.message}`;
+        $("modelBar").hidden = true;
+        $("modelStatus").innerHTML = `<span style="color:#ef4444;">Error loading AI model: ${esc(err.message)}</span>`;
       }
     }
 
@@ -1625,16 +1626,18 @@
         if (cached && cached.buf) {
           await loadModel(cached.buf, cached.name, true);
         } else {
-          $("modelStatus").innerHTML = `Could not auto-download <b>${MODEL_URL}</b>. You can load it manually using the <b>Custom Model</b> button.`;
+          $("modelStatus").innerHTML = `<span style="color:#ef4444;">Could not load <b>${MODEL_URL}</b>. Verify pothole.onnx exists.</span>`;
         }
       }
     }
 
-    $("modelFile").onchange = async function(e) {
-      const f = e.target.files[0];
-      if (!f) return;
-      await loadModel(await f.arrayBuffer(), f.name, false);
-    };
+    if ($("modelFile")) {
+      $("modelFile").onchange = async function(e) {
+        const f = e.target.files[0];
+        if (!f) return;
+        await loadModel(await f.arrayBuffer(), f.name, false);
+      };
+    }
 
     // --- Detection Inference Loop ---
     $("runBtn").onclick = async function() {
